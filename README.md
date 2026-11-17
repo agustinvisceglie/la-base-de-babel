@@ -8,12 +8,15 @@ Datos, métodos y código de **[Sobre Modelos y Tumbas](https://sobremodelosytum
 
 Cada nota de la publicación que usa datos tiene su carpeta con el código que baja, procesa y grafica las series, para que cualquiera pueda revisar y reproducir los números.
 
-## Estructura (en construcción)
+## Estructura
 
 ```
-datos/      series descargadas de fuentes públicas
-scripts/    código para bajar y procesar los datos
-notas/      una carpeta por nota publicada
+datos/
+  crudos/          descargas originales de cada fuente (no se suben: se regeneran con los scripts)
+  procesados/      series limpias, listas para analizar y graficar
+scripts/           funciones reutilizables de descarga y limpieza, por fuente
+notas/             una carpeta por nota publicada, reproducible con un comando
+requirements.txt   paquetes de Python con sus versiones exactas
 ```
 
 ## Fuentes
