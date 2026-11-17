@@ -12,9 +12,12 @@ técnico del Intercambio comercial argentino (ICA) del INDEC.
 Qué hace este script:
     1. Arma la serie mensual del capítulo 27 (exportaciones, importaciones y saldo):
        - De cada informe técnico del ICA publicado desde que la API de Series de Tiempo dejó de
-         actualizarse toma el cuadro del capítulo 27: el mes del informe y el mismo mes del año
-         anterior (ya revisado). Cada mes queda con la revisión más reciente publicada: cuando
-         sale un informe nuevo, su columna del año anterior reemplaza sola la versión vieja.
+         actualizarse toma el cuadro del capítulo 27 (año en curso y anterior). Con cada informe
+         arma acumulados oficiales: el acumulado hasta m y, restándole el mes m, el acumulado
+         revisado hasta m - 1. Para cada año y mes queda el acumulado del informe más reciente,
+         y cada mes es la diferencia entre acumulados consecutivos. Así la suma de los meses
+         coincide con el acumulado oficial más reciente. Cuando sale un informe nuevo, sus
+         acumulados reemplazan solos a los viejos.
        - Los meses que ningún informe cubre salen de la API de Series de Tiempo.
     2. Arma la serie mensual del intercambio comercial (totales, CyE y CyL) con la serie oficial
        por rubros y usos que publica la versión interactiva del informe más reciente.
@@ -144,11 +147,11 @@ def bajar_datos() -> dict:
     capitulos["impo"].append(rutas["impo_anual_capitulos"])
 
     print("Informes técnicos del ICA...")
-    informes, regs = indec.listar_informes_ica("listado_informes_ica.html")
+    informes_todos, regs = indec.listar_informes_ica("listado_informes_ica.html")
     registros += regs
     # Se usan todos los informes publicados desde el mes siguiente al último dato de la API.
     primer_informe = api.index.max() + pd.DateOffset(months=1)
-    informes = informes[informes["fecha_publicacion"] >= primer_informe].reset_index(drop=True)
+    informes = informes_todos[informes_todos["fecha_publicacion"] >= primer_informe].reset_index(drop=True)
     cuadros = []
     for informe in informes.itertuples():
         ruta, registro = indec.descargar_archivo(informe.url_cuadros)
@@ -167,7 +170,7 @@ def bajar_datos() -> dict:
     informes["mes_del_informe"] = [c["cap27"]["mes"].strftime("%Y-%m") for c in cuadros]
     return {
         "api": api, "metadatos": metadatos, "rutas": rutas, "capitulos": capitulos,
-        "informes": informes, "cuadros": cuadros,
+        "informes": informes, "informes_todos": informes_todos, "cuadros": cuadros,
         "rubros_usos": indec.leer_rubros_usos_mensual(ruta_rubros), "registros": registros,
     }
 
@@ -175,28 +178,85 @@ def bajar_datos() -> dict:
 # ---------------------------------------------------------------------------------------------
 # 2. Series
 # ---------------------------------------------------------------------------------------------
-def armar_cap27_mensual(api: pd.DataFrame, cuadros: list[dict]) -> pd.DataFrame:
-    """Capítulo 27 mensual: cada mes con la revisión más reciente publicada; si no hay, la API."""
-    del_informe = {}
-    # Se recorren los informes del más viejo al más nuevo: si dos informes publican el mismo mes,
-    # queda el del más nuevo (por ejemplo, sep-2025 del informe de sep-2026, columna "2025*").
-    for cuadro in sorted(cuadros, key=lambda c: c["fecha_publicacion"]):
-        c27, fecha = cuadro["cap27"], cuadro["fecha_publicacion"]
-        etiqueta = f"INDEC, informe ICA del {fecha:%d/%m/%Y}"
-        del_informe[c27["mes"] - pd.DateOffset(years=1)] = {
-            **c27["mes_anterior"], "fuente": f"{etiqueta}, mismo mes del año anterior (revisado)"}
-        del_informe[c27["mes"]] = {**c27["mes_actual"], "fuente": f"{etiqueta}, mes del informe"}
+def acumulados_revisados(cuadros: list[dict]) -> dict:
+    """Acumulado oficial más reciente de enero hasta cada mes, para cada año.
 
-    informes = pd.DataFrame.from_dict(del_informe, orient="index")
-    informes = informes.rename(columns={"expo": "expo_cap27_musd", "impo": "impo_cap27_musd",
-                                        "saldo": "saldo_cap27_musd"})
-    desde_api = api[~api.index.isin(informes.index)].copy()
+    Cada informe publica, con una misma revisión, el acumulado de enero al mes m y el valor del
+    mes m, para el año en curso y para el anterior. De ahí salen dos acumulados oficiales:
+        acumulado hasta m      = el acumulado del informe
+        acumulado hasta m - 1  = el acumulado del informe - el mes m del informe
+    (por ejemplo, el informe de febrero da ene-feb y, restando febrero, enero revisado).
+    Para cada año y mes queda el acumulado del informe publicado más recientemente.
+    Devuelve {(año, mes): {"fecha", "valores": {"expo", "impo", "saldo"}, "origen"}}.
+    """
+    acumulados = {}
+
+    def proponer(anio, mes, fecha, valores, origen):
+        vigente = acumulados.get((anio, mes))
+        if vigente is None or fecha > vigente["fecha"]:
+            acumulados[(anio, mes)] = {"fecha": fecha, "valores": valores, "origen": origen}
+
+    for cuadro in cuadros:
+        c27, fecha = cuadro["cap27"], cuadro["fecha_publicacion"]
+        m = c27["mes"].month
+        for anio, clave_acumulado, clave_mes in ((c27["mes"].year, "actual", "mes_actual"),
+                                                 (c27["mes"].year - 1, "anterior", "mes_anterior")):
+            acumulado, valor_mes = c27["acumulado"][clave_acumulado], c27[clave_mes]
+            proponer(anio, m, fecha, acumulado, f"ene-{m:02d}/{anio} del informe {fecha:%d/%m/%Y}")
+            if m > 1:
+                proponer(anio, m - 1, fecha, {k: acumulado[k] - valor_mes[k] for k in acumulado},
+                         f"ene-{m - 1:02d}/{anio} (acum. ene-{m:02d} menos mes {m:02d}) del informe {fecha:%d/%m/%Y}")
+    return acumulados
+
+
+def armar_cap27_mensual(api: pd.DataFrame, cuadros: list[dict]) -> pd.DataFrame:
+    """Capítulo 27 mensual a partir de los acumulados oficiales más recientes.
+
+    Cada mes es la diferencia entre acumulados consecutivos: mes(m) = acum(m) - acum(m-1), con
+    acum(0) = 0. Así, la suma de los meses de enero a m es exactamente el acumulado oficial más
+    reciente hasta m. Es aritmética sobre cifras publicadas, no una estimación. Cuando sale un
+    informe nuevo, sus acumulados reemplazan solos a los más viejos.
+    Los meses sin acumulados publicados (antes de la ventana de informes) salen de la API.
+    """
+    acumulados = acumulados_revisados(cuadros)
+    derivados = {}
+    for (anio, mes), info in sorted(acumulados.items()):
+        if mes == 1:
+            previo, origen_previo = {k: 0.0 for k in info["valores"]}, None
+        elif (anio, mes - 1) in acumulados:
+            previo = acumulados[(anio, mes - 1)]["valores"]
+            origen_previo = acumulados[(anio, mes - 1)]["origen"]
+        else:
+            continue  # sin acumulado del mes anterior no se puede derivar el mes
+        fuente = f"INDEC: acum. {info['origen']}" + (f" - acum. {origen_previo}" if origen_previo else "")
+        derivados[pd.Timestamp(anio, mes, 1)] = {
+            "expo_cap27_musd": info["valores"]["expo"] - previo["expo"],
+            "impo_cap27_musd": info["valores"]["impo"] - previo["impo"],
+            "saldo_cap27_musd": info["valores"]["saldo"] - previo["saldo"],
+            "fuente": fuente,
+        }
+    desde_informes = pd.DataFrame.from_dict(derivados, orient="index")
+
+    desde_api = api[~api.index.isin(desde_informes.index)].copy()
     desde_api["saldo_cap27_musd"] = desde_api["expo_cap27_musd"] - desde_api["impo_cap27_musd"]
     desde_api["fuente"] = FUENTE_API
 
-    mensual = pd.concat([desde_api, informes]).sort_index()
+    mensual = pd.concat([desde_api, desde_informes]).sort_index()
     mensual.index.name = "fecha"
     return mensual[["expo_cap27_musd", "impo_cap27_musd", "saldo_cap27_musd", "fuente"]]
+
+
+def meses_publicados(cuadros: list[dict]) -> pd.DataFrame:
+    """Valor mensual tal como lo publica el informe más reciente que trae ese mes (sin derivar).
+    Solo se usa para comparar con los meses derivados de los acumulados."""
+    publicados = {}
+    for cuadro in sorted(cuadros, key=lambda c: c["fecha_publicacion"]):
+        c27, fecha = cuadro["cap27"], cuadro["fecha_publicacion"]
+        publicados[c27["mes"] - pd.DateOffset(years=1)] = {**c27["mes_anterior"], "informe": f"{fecha:%d/%m/%Y}"}
+        publicados[c27["mes"]] = {**c27["mes_actual"], "informe": f"{fecha:%d/%m/%Y}"}
+    tabla = pd.DataFrame.from_dict(publicados, orient="index").sort_index()
+    tabla.index.name = "fecha"
+    return tabla
 
 
 def armar_ica_mensual(rubros_usos: pd.DataFrame) -> pd.DataFrame:
@@ -425,8 +485,8 @@ def control_publicados(cuadros: list[dict]) -> pd.DataFrame:
 
 
 def control_suma_de_meses(cap27: pd.DataFrame, anual: pd.DataFrame, cuadros: list[dict]) -> pd.DataFrame:
-    """Suma de los meses de la serie (revisión más reciente de cada mes) vs. anuales y acumulados
-    oficiales. Muestra cuánto cambia el número por mezclar revisiones de distinta fecha."""
+    """Suma de los meses de la serie vs. anuales y acumulados oficiales. Con el último informe
+    tiene que dar cero; con informes anteriores muestra cuánto revisó después el INDEC."""
     filas = []
     meses_por_anio = cap27.groupby(cap27.index.year).size()
     for anio in anual.index:
@@ -485,6 +545,55 @@ def comparar_api_con_informes(api: pd.DataFrame, cap27: pd.DataFrame) -> pd.Data
     return tabla
 
 
+def comparar_publicado_con_derivado(cap27: pd.DataFrame, cuadros: list[dict]) -> pd.DataFrame:
+    """Cada mes tal como lo publicó el informe más reciente que lo trae vs. el mes derivado de los
+    acumulados. La diferencia es la parte de las revisiones posteriores que cae en ese mes."""
+    publicados = meses_publicados(cuadros)
+    comunes = publicados.index.intersection(cap27.index)
+    tabla = pd.DataFrame({
+        "saldo_publicado": publicados.loc[comunes, "saldo"], "informe_publicado": publicados.loc[comunes, "informe"],
+        "saldo_derivado": cap27.loc[comunes, "saldo_cap27_musd"]})
+    tabla["dif_saldo"] = tabla["saldo_derivado"] - tabla["saldo_publicado"]
+    tabla.index.name = "fecha"
+    return tabla
+
+
+def contrastar_anuales(anual: pd.DataFrame, informes_todos: pd.DataFrame, anios: list[int]) -> tuple[pd.DataFrame, list[dict]]:
+    """Anual oficial del capítulo 27 vs. lo publicado en los informes ICA de diciembre:
+    primera publicación (informe de enero del año siguiente, columna del año en curso) y versión
+    revisada un año después (informe de enero de dos años después, columna del año anterior)."""
+    filas, registros = [], []
+    for anio in anios:
+        for version, anio_publicacion, clave in (("primera publicación", anio + 1, "actual"),
+                                                 ("revisada un año después", anio + 2, "anterior")):
+            fila = {"anio": anio, "version": version}
+            candidatos = informes_todos[(informes_todos["fecha_publicacion"].dt.year == anio_publicacion)
+                                        & (informes_todos["fecha_publicacion"].dt.month == 1)]
+            if candidatos.empty:
+                filas.append({**fila, "estado": "TODAVIA NO PUBLICADO"})
+                continue
+            informe = candidatos.iloc[0]
+            fila["informe"] = f"{informe.fecha_publicacion:%d/%m/%Y}"
+            ruta, registro = indec.descargar_archivo(informe.url_cuadros)
+            registros.append(registro)
+            try:
+                c27 = indec.leer_cuadro_capitulo27(ruta)
+            except (ValueError, StopIteration):
+                filas.append({**fila, "estado": "EL INFORME NO TRAE EL CUADRO DEL CAPITULO 27"})
+                continue
+            if c27["mes"] != pd.Timestamp(anio_publicacion - 1, 12, 1):
+                raise ValueError(f"{ruta.name}: se esperaba el informe de diciembre de {anio_publicacion - 1}")
+            publicado = c27["acumulado"][clave]
+            for c in ("expo", "impo", "saldo"):
+                fila[f"{c}_informe"] = publicado[c]
+                fila[f"{c}_anual_oficial"] = anual.loc[anio, f"{c}_cap27_musd"]
+                fila[f"dif_{c}"] = anual.loc[anio, f"{c}_cap27_musd"] - publicado[c]
+            fila["anual_oficial_de"] = anual.loc[anio, "fuente_cap27"]
+            fila["estado"] = "OK" if abs(fila["dif_saldo"]) <= TOLERANCIA_MUSD else "REVISION POSTERIOR DEL INDEC"
+            filas.append(fila)
+    return pd.DataFrame(filas), registros
+
+
 # ---------------------------------------------------------------------------------------------
 # Programa principal
 # ---------------------------------------------------------------------------------------------
@@ -524,17 +633,28 @@ def main():
     suma_meses = control_suma_de_meses(cap27, anual, cuadros)
     cye_cyl = comparar_cye_cyl(anual, ica, ultimo)
     api_vs_informes = comparar_api_con_informes(datos["api"], cap27)
-    generales = pd.concat([generales, pd.DataFrame([{
-        "control": "Unidades de los cuadros por capítulo (total del cuadro / total oficial)",
-        "estado": "OK" if (control_unidades["estado"] == "OK").all() else "REVISAR",
-        "detalle": f"cociente entre {control_unidades['cociente'].min():.4f} y {control_unidades['cociente'].max():.4f}"}])],
-        ignore_index=True)
+    publicado_vs_derivado = comparar_publicado_con_derivado(cap27, cuadros)
+    anio_completo = ultimo["cap27"]["mes"].year - 1
+    anual_vs_informes, regs = contrastar_anuales(anual, datos["informes_todos"], list(range(anio_completo - 2, anio_completo + 1)))
+    datos["registros"] += regs
+
+    ultimo_acumulado = suma_meses[suma_meses["fuente_oficial"] == f"Informe ICA del {ultimo['fecha_publicacion']:%d/%m/%Y}"]
+    dif_ultimo = ultimo_acumulado["saldo_cap27_musd_dif"].abs().max()
+    generales = pd.concat([generales, pd.DataFrame([
+        {"control": "Unidades de los cuadros por capítulo (total del cuadro / total oficial)",
+         "estado": "OK" if (control_unidades["estado"] == "OK").all() else "REVISAR",
+         "detalle": f"cociente entre {control_unidades['cociente'].min():.4f} y {control_unidades['cociente'].max():.4f}"},
+        {"control": "Suma de los meses = acumulados oficiales del último informe (año en curso y anterior)",
+         "estado": "OK" if dif_ultimo < 0.01 else "REVISAR", "detalle": f"diferencia máxima {dif_ultimo:.6f} MUSD"},
+    ])], ignore_index=True)
     generales.to_csv(VALIDACION / "controles.csv", index=False)
     control_unidades.to_csv(VALIDACION / "control_unidades_cuadros_capitulos.csv", index=False, float_format="%.4f")
     publicados.to_csv(VALIDACION / "control_valores_publicados.csv", index=False)
     suma_meses.to_csv(VALIDACION / "cap27_suma_meses_vs_oficial.csv", index=False, float_format="%.2f")
     cye_cyl.to_csv(VALIDACION / "comparacion_cye_cyl_vs_cap27.csv", float_format="%.1f")
     api_vs_informes.to_csv(VALIDACION / "cap27_api_vs_informes.csv", float_format="%.2f", date_format="%Y-%m-%d")
+    publicado_vs_derivado.to_csv(VALIDACION / "cap27_mes_publicado_vs_derivado.csv", float_format="%.2f", date_format="%Y-%m-%d")
+    anual_vs_informes.to_csv(VALIDACION / "cap27_anual_vs_informes.csv", index=False, float_format="%.2f")
     datos["informes"].to_csv(VALIDACION / "informes_ica_usados.csv", index=False, date_format="%Y-%m-%d")
     datos["metadatos"].to_csv(VALIDACION / "metadatos_series_api.csv", index=False)
     guardar_registro(datos["registros"], VALIDACION / "descargas.csv")
@@ -547,9 +667,10 @@ def main():
     print("\nControles generales:\n" + generales.to_string(index=False))
     print("\nValores leídos vs. publicados:\n" + publicados[["dato", "valor_leido", "valor_publicado", "diferencia", "estado"]].to_string(index=False))
     print("\nCifras para el texto (solo oficiales):\n" + cifras.drop(columns="fuente").round(1).to_string())
-    actual = suma_meses[suma_meses["fuente_oficial"] == f"Informe ICA del {ultimo['fecha_publicacion']:%d/%m/%Y}"]
     print("\nSuma de meses vs. acumulado oficial (último informe):\n"
-          + actual[["periodo", "saldo_cap27_musd_suma_meses", "saldo_cap27_musd_oficial", "saldo_cap27_musd_dif"]].round(1).to_string(index=False))
+          + ultimo_acumulado[["periodo", "saldo_cap27_musd_suma_meses", "saldo_cap27_musd_oficial", "saldo_cap27_musd_dif"]].round(1).to_string(index=False))
+    print("\nAnual oficial del capítulo 27 vs. informes de diciembre (saldo):\n"
+          + anual_vs_informes.reindex(columns=["anio", "version", "informe", "saldo_informe", "saldo_anual_oficial", "dif_saldo", "estado"]).round(1).to_string(index=False))
 
     hay_problemas = (generales["estado"] != "OK").any() or (publicados["estado"] != "OK").any()
     print("\nRESULTADO:", "HAY CONTROLES PARA REVISAR" if hay_problemas else "todos los controles OK")

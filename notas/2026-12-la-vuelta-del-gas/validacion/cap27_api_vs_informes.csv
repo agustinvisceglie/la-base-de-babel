@@ -1,14 +1,15 @@
 fecha,expo_api,expo_informe,impo_api,impo_informe,fuente_informe,dif_expo,dif_impo
-2024-02-01,619.69,619.69,167.44,167.44,"INDEC, informe ICA del 19/03/2025, mismo mes del año anterior (revisado)",0.00,0.00
-2024-03-01,724.51,727.91,111.33,111.54,"INDEC, informe ICA del 16/04/2025, mismo mes del año anterior (revisado)",-3.40,-0.21
-2024-04-01,797.77,799.88,220.55,220.67,"INDEC, informe ICA del 20/05/2025, mismo mes del año anterior (revisado)",-2.11,-0.12
-2024-05-01,791.23,794.19,422.09,422.08,"INDEC, informe ICA del 19/06/2025, mismo mes del año anterior (revisado)",-2.96,0.01
-2024-06-01,507.87,511.72,762.61,750.82,"INDEC, informe ICA del 17/07/2025, mismo mes del año anterior (revisado)",-3.85,11.79
-2024-07-01,731.74,734.64,705.65,706.50,"INDEC, informe ICA del 20/08/2025, mismo mes del año anterior (revisado)",-2.90,-0.86
-2024-08-01,650.96,651.57,482.45,482.45,"INDEC, informe ICA del 18/09/2025, mismo mes del año anterior (revisado)",-0.61,0.01
-2024-09-01,662.43,663.18,166.47,166.47,"INDEC, informe ICA del 20/10/2025, mismo mes del año anterior (revisado)",-0.75,0.00
-2024-10-01,709.71,710.85,178.29,178.28,"INDEC, informe ICA del 19/11/2025, mismo mes del año anterior (revisado)",-1.14,0.01
-2024-11-01,534.82,549.82,110.33,118.76,"INDEC, informe ICA del 18/12/2025, mismo mes del año anterior (revisado)",-15.00,-8.42
-2024-12-01,900.57,908.58,173.06,173.16,"INDEC, informe ICA del 20/01/2026, mismo mes del año anterior (revisado)",-8.00,-0.09
-2025-01-01,772.30,772.30,184.98,184.98,"INDEC, informe ICA del 19/02/2026, mismo mes del año anterior (revisado)",0.00,0.00
-2025-02-01,723.53,743.97,208.82,208.86,"INDEC, informe ICA del 19/03/2026, mismo mes del año anterior (revisado)",-20.43,-0.04
+2024-01-01,557.30,557.30,279.69,279.69,INDEC: acum. ene-01/2024 (acum. ene-02 menos mes 02) del informe 19/03/2025,0.00,0.00
+2024-02-01,619.69,629.58,167.44,167.42,INDEC: acum. ene-02/2024 (acum. ene-03 menos mes 03) del informe 16/04/2025 - acum. ene-01/2024 (acum. ene-02 menos mes 02) del informe 19/03/2025,-9.88,0.03
+2024-03-01,724.51,727.91,111.33,111.54,INDEC: acum. ene-03/2024 (acum. ene-04 menos mes 04) del informe 20/05/2025 - acum. ene-02/2024 (acum. ene-03 menos mes 03) del informe 16/04/2025,-3.40,-0.21
+2024-04-01,797.77,799.88,220.55,220.67,INDEC: acum. ene-04/2024 (acum. ene-05 menos mes 05) del informe 19/06/2025 - acum. ene-03/2024 (acum. ene-04 menos mes 04) del informe 20/05/2025,-2.11,-0.12
+2024-05-01,791.23,794.19,422.09,422.08,INDEC: acum. ene-05/2024 (acum. ene-06 menos mes 06) del informe 17/07/2025 - acum. ene-04/2024 (acum. ene-05 menos mes 05) del informe 19/06/2025,-2.96,0.01
+2024-06-01,507.87,511.72,762.61,750.82,INDEC: acum. ene-06/2024 (acum. ene-07 menos mes 07) del informe 20/08/2025 - acum. ene-05/2024 (acum. ene-06 menos mes 06) del informe 17/07/2025,-3.85,11.79
+2024-07-01,731.74,734.64,705.65,706.50,INDEC: acum. ene-07/2024 (acum. ene-08 menos mes 08) del informe 18/09/2025 - acum. ene-06/2024 (acum. ene-07 menos mes 07) del informe 20/08/2025,-2.90,-0.86
+2024-08-01,650.96,651.57,482.45,482.45,INDEC: acum. ene-08/2024 (acum. ene-09 menos mes 09) del informe 20/10/2025 - acum. ene-07/2024 (acum. ene-08 menos mes 08) del informe 18/09/2025,-0.61,0.01
+2024-09-01,662.43,663.18,166.47,166.47,INDEC: acum. ene-09/2024 (acum. ene-10 menos mes 10) del informe 19/11/2025 - acum. ene-08/2024 (acum. ene-09 menos mes 09) del informe 20/10/2025,-0.75,-0.00
+2024-10-01,709.71,710.85,178.29,178.28,INDEC: acum. ene-10/2024 (acum. ene-11 menos mes 11) del informe 18/12/2025 - acum. ene-09/2024 (acum. ene-10 menos mes 10) del informe 19/11/2025,-1.14,0.01
+2024-11-01,534.82,549.82,110.33,118.76,INDEC: acum. ene-11/2024 (acum. ene-12 menos mes 12) del informe 20/01/2026 - acum. ene-10/2024 (acum. ene-11 menos mes 11) del informe 18/12/2025,-15.00,-8.42
+2024-12-01,900.57,908.58,173.06,173.16,INDEC: acum. ene-12/2024 del informe 20/01/2026 - acum. ene-11/2024 (acum. ene-12 menos mes 12) del informe 20/01/2026,-8.00,-0.09
+2025-01-01,772.30,772.30,184.98,184.98,INDEC: acum. ene-01/2025 (acum. ene-02 menos mes 02) del informe 19/03/2026,0.00,0.00
+2025-02-01,723.53,743.97,208.82,208.86,INDEC: acum. ene-02/2025 (acum. ene-03 menos mes 03) del informe 20/04/2026 - acum. ene-01/2025 (acum. ene-02 menos mes 02) del informe 19/03/2026,-20.43,-0.04

@@ -34,7 +34,17 @@ Salen **solo de anuales y acumulados oficiales** (no de sumar meses). Archivo: `
 
 Fuentes: anuales, `exp_ncm_21_25.xls` e `imp_ncm_21_25.xls` (capítulo 27), y `exp_gr_80_25.xls` e `imp_uso_econ_80_25.xls` (saldo de bienes). Acumulados, informe ICA del 19/10/2026 (cuadro 8 para el capítulo 27 y cuadro 1 para el saldo de bienes). 2025 es dato provisorio y 2026, estimado.
 
-**Diferencia entre la suma de los meses y el acumulado oficial, ene–sep 2026:** la suma de los meses da 7.874,0 contra 7.999,6 del acumulado oficial (−125,6; −1,6%). Por exportaciones, −236,3; por importaciones, −110,7. El motivo se explica en el control 4. Por eso el último punto de g2 (10.022,8) queda 148,8 por debajo de la cifra oficial de 12 meses (10.171,6). En el texto se cita la cifra oficial.
+**Diferencia entre la suma de los meses y el acumulado oficial, ene–sep 2026: 0,0.** Con el método anterior, que tomaba cada mes tal como se publicó, era −125,6. Ahora los meses se derivan de los acumulados oficiales (punto 1 de "Cómo se arma cada serie"). El último punto de g2 (10.159,3) queda 12,3 por debajo de la cifra oficial de 12 meses (10.171,6). Es la revisión del anual 2025 posterior al informe de diciembre (6.662,9 → 6.675,3), que el INDEC no publica mes a mes. En el texto se cita la cifra oficial.
+
+**Origen de cada cifra anual del capítulo 27** (celdas de `datos/crudos/indec/`, archivos actualizados a junio de 2026):
+
+| Año | Exportaciones | Importaciones |
+|---|---|---|
+| 2023 | `exp_ncm_21_25.xls`, hoja "Expo_2021-2025", celda D10 = 6.563,06 | `imp_ncm_21_25.xls`, hoja "Impo_2021-2025", celda D12 = 7.763,02 |
+| 2024 | Ídem, celda E10 | Ídem, celda E12 |
+| 2025 | Ídem, celda F10 | Ídem, celda F12 |
+
+La fila 10 (exportaciones) y la 12 (importaciones) son "Combustibles y aceites minerales y productos de su destilación; materias bituminosas; ceras minerales" (capítulo 27). Su contraste con los informes técnicos está en el control 5.
 
 ### Definición: capítulo 27 de la NCM
 
@@ -46,9 +56,9 @@ Antes se usaba CyE − CyL (gran rubro de exportación contra uso económico de 
 
 | Serie | Archivo o ID | Organismo | Frecuencia | Uso |
 |---|---|---|---|---|
-| Capítulo 27, expo e impo, mes del informe y mismo mes del año anterior; acumulados | Excel de cuadros de cada informe técnico del ICA (`ica_cuadros_DD_MM_AA.xls`, hoja del capítulo 27: `c8`, o `c7` en enero). 20 informes, del 19/03/2025 al 19/10/2026; lista con URL en `validacion/informes_ica_usados.csv` | INDEC | Mensual | Serie mensual desde 02/2024 y acumulados oficiales |
+| Capítulo 27, expo e impo, mes del informe y mismo mes del año anterior; acumulados | Excel de cuadros de cada informe técnico del ICA (`ica_cuadros_DD_MM_AA.xls`, hoja del capítulo 27: `c8`, o `c7` en enero). 20 informes, del 19/03/2025 al 19/10/2026; lista con URL en `validacion/informes_ica_usados.csv` | INDEC | Mensual | Serie mensual desde 01/2024 y acumulados oficiales |
 | Listado de informes técnicos del ICA | [www.indec.gob.ar/Institucional/Indec/InformesTecnicos/40](https://www.indec.gob.ar/Institucional/Indec/InformesTecnicos/40) | INDEC | — | Encontrar cada informe y su Excel de cuadros |
-| Capítulo 27, expo e impo | API de Series de Tiempo `162.3_XMB_MINION_0_0_56` y `163.3_MMBUSTIION_0_0_59` | INDEC (publica: Subsecretaría de Programación Macroeconómica) | Mensual, 01/1990–02/2025 | Serie mensual 01/2005–01/2024 y anuales 2006–2009 |
+| Capítulo 27, expo e impo | API de Series de Tiempo `162.3_XMB_MINION_0_0_56` y `163.3_MMBUSTIION_0_0_59` | INDEC (publica: Subsecretaría de Programación Macroeconómica) | Mensual, 01/1990–02/2025 | Serie mensual 01/2005–12/2023 y anuales 2006–2009 |
 | Capítulo 27, anual | `exp_ncm_AA_AA.xls` e `imp_ncm_AA_AA.xls`, quinquenios del 2010–2014 al 2021–2025 | INDEC | Anual | Anuales 2010–2025 |
 | Exportaciones por rubro e importaciones por uso, totales | `exp_gr_80_25.xls`, `imp_uso_econ_80_25.xls` (vienen en miles de USD y se pasan a millones) | INDEC | Anual | Saldo comercial de bienes anual; CyE y CyL anual |
 | Exportaciones por rubro e importaciones por uso, mensual desde 2004 | `serie_rubros_usos_mensual.xlsx` de la [versión interactiva del informe](https://www.indec.gob.ar/ftp/ica_digital/ica_d_10_263F42E3F39F/) (viene en USD y se pasa a millones) | INDEC | Mensual | Saldo comercial de bienes mensual (g2); CyE y CyL para la comparación |
@@ -59,9 +69,16 @@ Fecha de descarga de todo: **17/11/2026**. La URL, la hora, el tamaño y el hash
 
 ### Cómo se arma cada serie
 
-1. **Capítulo 27 mensual: cada mes con la revisión más reciente publicada.** Cada informe técnico trae el mes del informe (primera publicación) y el mismo mes del año anterior (revisado). El script lee todos los informes publicados desde que la API dejó de actualizarse. Para cada mes se queda con el informe más nuevo que lo publica; por ejemplo, marzo–septiembre de 2025 salen de la columna "2025*" de los informes de 2026. **Cuando sale un informe nuevo, su columna del año anterior reemplaza sola la versión vieja de ese mes.** Los meses que ningún informe cubre salen de la API: hoy, 01/2005–01/2024 (229 meses), y 02/2024–09/2026 (32 meses) sale de informes. La columna `fuente` de `datos/procesados/ica_cap27_mensual.csv` dice de qué informe sale cada mes.
-2. **No hay valores estimados.** Todos los meses son cifras publicadas por el INDEC, así que no se agregó columna de estimación ni nota al pie. La regla del `CLAUDE.md` sobre estimaciones no se aplica en esta etapa.
-3. **Los meses mezclan revisiones de distinta fecha.** Los meses del año en curso están en su primera publicación hasta que salga el informe del mismo mes del año siguiente. Por eso la suma de los meses no coincide exactamente con los acumulados oficiales (control 4).
+1. **Capítulo 27 mensual: derivado de los acumulados oficiales más recientes.** Cada informe técnico publica, con una misma revisión, el acumulado de enero al mes m y el valor del mes m, para el año en curso y para el anterior. De cada informe salen dos acumulados oficiales:
+   - acumulado hasta m = el acumulado del informe;
+   - acumulado hasta m − 1 = el acumulado del informe menos el mes m del informe.
+
+   Por ejemplo, el informe de febrero da ene–feb y, restando febrero, enero revisado. Para cada año y mes se toma el acumulado del informe publicado más recientemente, sea del año en curso o de la columna del año anterior. **Cada mes es la diferencia entre acumulados consecutivos:** mes(m) = acum(m) − acum(m − 1). Así, la suma de los meses de enero a m es exactamente el acumulado oficial más reciente hasta m. Es aritmética sobre cifras publicadas, no una estimación.
+   - **Actualización:** cuando sale un informe nuevo, sus acumulados reemplazan solos a los más viejos (también los del año anterior).
+   - **Cobertura:** los informes cubren 01/2024–09/2026 (33 meses); los meses anteriores, 01/2005–12/2023 (228 meses), salen de la API.
+   - **Trazabilidad:** la columna `fuente` de `datos/procesados/ica_cap27_mensual.csv` dice de qué informes y acumulados sale cada mes.
+2. **No hay valores estimados.** Todos los valores salen de cifras publicadas por el INDEC, así que no se agregó columna de estimación ni nota al pie. La regla del `CLAUDE.md` sobre estimaciones no se aplica en esta etapa.
+3. **Advertencia sobre los meses sueltos.** Cuando entre dos informes consecutivos el INDEC corrige meses anteriores, esa corrección queda imputada en el último mes de la ventana. Ejemplo: el informe de junio 2026 bajó ene–abr, y mayo derivado queda 78,3 por debajo de mayo publicado. Las sumas desde enero coinciden exactamente con el acumulado oficial más reciente. Los acumulados de 12 meses también, salvo por la revisión anual de 2025 (−12,3). Un mes aislado no es necesariamente el "mes publicado". La comparación mes a mes está en `validacion/cap27_mes_publicado_vs_derivado.csv`: de 32 meses, 9 difieren en más de 1 millón.
 4. **Capítulo 27 anual:** para cada año se toma el cuadro anual por capítulo más reciente que lo trae (por ejemplo, 2023 de `21_25` y no de `19_23`). Para 2006–2009 no hay cuadro anual por capítulo publicado, así que se usa la suma de los 12 meses de la API. Antes de 2018 la base de comercio exterior no tenía secreto estadístico y la API coincide exactamente con ella (en 2006, 7.110,6 en las dos).
 5. **2025: se usa el anual revisado, 6.675,3** (`exp_ncm_21_25.xls` e `imp_ncm_21_25.xls`: 9.717,8 − 3.042,5). El informe de enero de 2026 (datos de diciembre de 2025, publicado el 20/01/2026) informó un acumulado ene–dic 2025 de **6.663** (6.662,9 en su Excel de cuadros); el INDEC lo revisó después en +12,4.
 6. **Saldo comercial de bienes mensual:** sale de `serie_rubros_usos_mensual.xlsx` (suma de todos los rubros y de todos los usos, incluido "Resto"). Reemplaza a la API usada en la versión anterior de esta etapa. Esta serie coincide con los anuales oficiales en todos los años 2004–2025 (diferencia máxima: 0,002) y con el acumulado del cuadro 1. La API, en cambio, no tenía las revisiones de 2014–2016 y 2022–2023.
@@ -115,7 +132,7 @@ El caso que más cambia la lectura es 2023: con CyE − CyL el saldo energético
 
 (1) En 2006 la referencia es la suma de la API (no hay cuadro anual por capítulo).
 
-**c) Contra la API sola.** La API trae el total completo del capítulo 27, pero dejó de actualizarse en febrero de 2025. En los 13 meses en que coincide con los informes (02/2024–02/2025), las diferencias son de revisión: como máximo 20,4 en exportaciones y 11,8 en importaciones (`validacion/cap27_api_vs_informes.csv`).
+**c) Contra la API sola.** La API trae el total completo del capítulo 27, pero dejó de actualizarse en febrero de 2025. En los 14 meses en que coincide con los informes (01/2024–02/2025), las diferencias son de revisión: como máximo 20,4 en exportaciones y 11,8 en importaciones (`validacion/cap27_api_vs_informes.csv`).
 
 **d) La versión interactiva del informe no tiene la serie del capítulo 27.** La nota "serie original desde 1986, desestacionalizada y tendencia-ciclo desde 1996, con descarga en xlsx" (p. 4 de los informes) se refiere a las exportaciones, importaciones y saldo totales. Revisé las cinco páginas del sitio interactivo y los archivos que cargan sus gráficos: no hay ninguno del capítulo 27.
 
@@ -145,27 +162,45 @@ El caso que más cambia la lectura es 2023: con CyE − CyL el saldo energético
 - En los 40 cuadros leídos (mes actual y mes del año anterior de 20 informes), el saldo es igual a expo − impo.
 - Todos los meses cumplen 0 ≤ capítulo 27 ≤ total, en exportaciones y en importaciones.
 - La serie de rubros y usos coincide con los anuales oficiales (2004–2025) y con el acumulado del cuadro 1 (ene–sep 2025 y 2026).
+- La suma de los meses del capítulo 27 coincide con los acumulados oficiales del último informe: ene–sep 2026 y ene–sep 2025 (diferencia 0).
 
 **Control 3. Unidades** (`validacion/control_unidades_cuadros_capitulos.csv`). Uno de los cuadros por capítulo (`exp_ncm_18_22.xls`) no declara la unidad. Por eso, para cada cuadro y año, el total del cuadro se divide por el total anual oficial en millones. Los cocientes van de 0,988 a 1,052: todos están en millones, y las diferencias son revisiones. La mayor, el 2014 estimado del cuadro 2010–2014, no se usa.
 
-**Control 4. Suma de los meses vs. anuales y acumulados oficiales** (`validacion/cap27_suma_meses_vs_oficial.csv`). Mide cuánto pesa la mezcla de revisiones en la serie mensual.
+**Control 4. Suma de los meses vs. anuales y acumulados oficiales** (`validacion/cap27_suma_meses_vs_oficial.csv`).
 
-Acumulados de 2026 de cada informe contra la suma de los meses actuales (saldo):
+Acumulados de 2026 que publicó cada informe contra la suma de los meses de la serie, que hoy tienen la revisión más reciente (saldo). La diferencia es cuánto revisó el INDEC ese acumulado en informes posteriores; en el último informe es cero por construcción.
 
-| Acumulado | Informe | Suma de meses | Oficial | Diferencia |
+| Acumulado | Informe | Suma de meses | Publicado en ese informe | Diferencia |
 |---|---|---:|---:|---:|
-| Ene–feb 2026 | 19/03/2026 | 883,7 | 1.035,9 | −152,2 |
-| Ene–mar 2026 | 20/04/2026 | 1.828,9 | 2.008,7 | −179,8 |
-| Ene–abr 2026 | 20/05/2026 | 3.077,0 | 3.281,2 | −204,2 |
-| Ene–may 2026 | 18/06/2026 | 4.472,4 | 4.686,3 | −213,8 |
-| Ene–jun 2026 | 20/07/2026 | 4.940,8 | 5.076,2 | −135,5 |
-| Ene–jul 2026 | 20/08/2026 | 5.662,8 | 5.805,8 | −142,9 |
-| Ene–ago 2026 | 18/09/2026 | 6.433,5 | 6.576,2 | −142,8 |
-| Ene–sep 2026 | 19/10/2026 | 7.874,0 | 7.999,6 | −125,6 |
+| Ene 2026 | 19/02/2026 | 656,9 | 504,7 | 152,2 |
+| Ene–feb 2026 | 19/03/2026 | 1.063,4 | 1.035,9 | 27,5 |
+| Ene–mar 2026 | 20/04/2026 | 2.033,1 | 2.008,7 | 24,4 |
+| Ene–abr 2026 | 20/05/2026 | 3.290,8 | 3.281,2 | 9,7 |
+| Ene–may 2026 | 18/06/2026 | 4.607,9 | 4.686,3 | −78,3 |
+| Ene–jun 2026 | 20/07/2026 | 5.083,7 | 5.076,2 | 7,5 |
+| Ene–jul 2026 | 20/08/2026 | 5.805,6 | 5.805,8 | −0,1 |
+| Ene–ago 2026 | 18/09/2026 | 6.559,1 | 6.576,2 | −17,1 |
+| Ene–sep 2026 | 19/10/2026 | 7.999,6 | 7.999,6 | 0,0 |
 
-La mayor parte aparece ya en el informe de febrero. Su acumulado ene–feb implica que el saldo de enero de 2026 fue revisado hacia arriba en unos 152 millones, casi todo por exportaciones (138,6 de esos 152,2). Ese enero revisado no se publica como dato mensual hasta el informe de enero de 2027 (columna "2026*"); cuando salga, el script lo va a tomar solo. Mientras tanto, las cifras para el texto usan los acumulados oficiales. En ene–sep 2025, cuyos meses ya salen revisados, la suma coincide con el acumulado oficial (4.503,2).
+La revisión más grande fue la de enero de 2026: el informe de febrero lo subió en 152,2 millones, casi todo por exportaciones. Con el método anterior, que tomaba los meses tal como se publicaron, esa revisión quedaba afuera y la suma ene–sep 2026 daba 7.874,0 (−125,6). Ahora entra por el acumulado ene–feb.
 
-Años completos: la suma de los meses difiere del anual oficial en menos de 60 millones por año: 2016 (−56,0), 2021 (−53,2), 2019 (−29,8), 2018 (+26,0), 2025 (−23,2), 2023 (−17,7), 2022 (+16,1), 2024 (−9,9) y 2017 (−1,7). Son revisiones posteriores del INDEC que no se publican mes a mes.
+Años completos: la suma de los meses difiere del anual oficial en menos de 60 millones por año: 2016 (−56,0), 2021 (−53,2), 2019 (−29,8), 2018 (+26,0), 2023 (−17,7), 2022 (+16,1), 2025 (−12,3) y 2017 (−1,7); 2024 coincide (0,0). Hasta 2023 son revisiones del INDEC que la API no incorpora. En 2025 es la revisión del anual posterior al informe de diciembre (control 5).
+
+**Control 5. Anual oficial del capítulo 27 vs. informes de diciembre** (`validacion/cap27_anual_vs_informes.csv`). Para cada año se contrasta el anual oficial con lo publicado en el informe de diciembre de ese año (primera publicación) y en el de diciembre del año siguiente (columna del año anterior, revisada). Las diferencias son anual oficial menos informe.
+
+| Año | Versión | Informe | Expo | Impo | Saldo | Dif. expo | Dif. impo | Dif. saldo |
+|---|---|---|---:|---:|---:|---:|---:|---:|
+| 2023 | Primera publicación | 18/01/2024 | — | — | — | — | — | — |
+| 2023 | Revisada | 20/01/2025 (cuadro 33) | 6.545,4 | 7.763,1 | −1.217,7 | 17,7 | 0,0 | 17,7 |
+| 2024 | Primera publicación | 20/01/2025 (cuadro 33) | 8.203,2 | 3.788,8 | 4.414,4 | 36,0 | −10,9 | 47,0 |
+| 2024 | Revisada | 20/01/2026 | 8.239,2 | 3.777,8 | 4.461,4 | 0,0 | 0,0 | 0,0 |
+| 2025 | Primera publicación | 20/01/2026 | 9.705,4 | 3.042,5 | 6.662,9 | 12,3 | 0,0 | 12,3 |
+| 2025 | Revisada | Se publica en enero de 2027 | | | | | | |
+
+- **2023:** el informe de diciembre de 2023 todavía no traía el cuadro del capítulo 27. La primera publicación disponible es la columna "2023*" del informe del 20/01/2025: −1.217,7. El anual oficial actual (−1.200,0) es 17,7 mayor, todo por exportaciones, por una revisión posterior.
+- **Historial de las exportaciones de 2023:** el cuadro 2019–2023 daba 6.545; el informe de enero de 2025, 6.545,4; el cuadro 2020–2024, 6.643,3; y el cuadro 2021–2025 (junio de 2026), 6.563,1. La nota usa el más reciente. Conviene citar 2023 como "alrededor de −1.200 millones" o aclarar que es el dato revisado a junio de 2026.
+- **2024:** la versión revisada coincide exactamente con el anual oficial.
+- **2025:** el anual revisado (6.675,3) supera en 12,3 a lo publicado en enero de 2026 (6.663). Se usa el revisado.
 
 ### Lectura rápida de los resultados (para chequear que tengan sentido, no para publicar)
 

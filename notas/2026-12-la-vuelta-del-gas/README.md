@@ -16,7 +16,7 @@ python -m venv .venv
 .venv/Scripts/python notas/2026-12-la-vuelta-del-gas/correr_todo.py
 ```
 
-El script baja los datos de las fuentes oficiales del INDEC, rearma las series, genera los gráficos y corre los controles; si un control falla, lo dice en pantalla. Los datos se bajan en cada corrida. Cuando el INDEC publica un informe nuevo, el script lo encuentra solo y cada mes queda con su revisión más reciente. La fecha de cada descarga queda en `validacion/`.
+El script baja los datos de las fuentes oficiales del INDEC, rearma las series, genera los gráficos y corre los controles; si un control falla, lo dice en pantalla. Los datos se bajan en cada corrida. Cuando el INDEC publica un informe nuevo, el script lo encuentra solo. La serie mensual del capítulo 27 se deriva de los acumulados oficiales más recientes, así que la suma de los meses coincide con lo publicado (detalle en `informe_validacion.md`). La fecha de cada descarga queda en `validacion/`.
 
 ## Archivos
 
@@ -36,7 +36,7 @@ Series limpias que genera la nota, en `datos/procesados/` (se pueden reusar en o
 
 | Archivo | Qué es |
 |---|---|
-| `ica_cap27_mensual.csv` | Capítulo 27 mensual desde 2005: exportaciones, importaciones y saldo, con la fuente de cada mes (informe del INDEC del que sale, o API). |
+| `ica_cap27_mensual.csv` | Capítulo 27 mensual desde 2005: exportaciones, importaciones y saldo, con la fuente de cada mes (acumulados de los informes del INDEC de los que sale, o API). |
 | `ica_mensual.csv` | Mensual desde 2004: exportaciones e importaciones totales, Combustibles y energía (CyE), Combustibles y lubricantes (CyL), saldo comercial de bienes y saldo CyE − CyL. |
 | `ica_anual.csv` | Anual oficial: totales, CyE, CyL y capítulo 27, con la marca de dato provisorio y el cuadro del que sale el capítulo 27. |
 
@@ -46,7 +46,7 @@ Las descargas originales quedan en `datos/crudos/`, que no se sube al repositori
 
 Punto decimal, coma como separador de columnas y una fila por período, listos para pegar en Datawrapper (que después los muestra con formato argentino). Valores en millones de dólares corrientes; exportaciones FOB, importaciones CIF.
 
-Fuente sugerida para los gráficos: *"Fuente: INDEC, Intercambio comercial argentino (capítulo 27 de la NCM). 2024 y 2025, datos provisorios; 2026, estimados."* En g2 conviene agregar: *"Cada mes, con su última revisión publicada."* La serie no tiene valores estimados por nosotros, así que no lleva nota de estimación.
+Fuente sugerida para los gráficos: *"Fuente: INDEC, Intercambio comercial argentino (capítulo 27 de la NCM). 2024 y 2025, datos provisorios; 2026, estimados."* En g2 conviene agregar: *"Meses derivados de los acumulados oficiales más recientes."* La serie no tiene valores estimados por nosotros, así que no lleva nota de estimación.
 
 ## Estado
 
