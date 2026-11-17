@@ -187,9 +187,10 @@ def listar_informes_ica(nombre_html: str) -> tuple[pd.DataFrame, list[dict]]:
     filas, inicio_bloque = [], 0
     for enlace in re.finditer(r"ica_(\d{2})_(\d{2})([0-9A-F]+)\.pdf", html):
         # La fecha de publicación aparece en el texto del bloque anterior al enlace:
-        # "19/10/2026. Intercambio comercial argentino ..."
-        bloque = re.sub(r"<[^>]+>", " ", html[inicio_bloque:enlace.start()])
-        fechas = re.findall(r"(\d{1,2})/(\d{1,2})/(\d{4})\.?\s*Intercambio comercial", bloque)
+        # "19/10/2026. Intercambio comercial argentino ...". Se sacan las etiquetas HTML sin dejar
+        # espacios (a veces cortan palabras) y se aceptan mayúsculas y saltos de línea.
+        bloque = re.sub(r"<[^>]+>", "", html[inicio_bloque:enlace.start()])
+        fechas = re.findall(r"(\d{1,2})/(\d{1,2})/(\d{4})\.?\s*Intercambio\s+comercial", bloque, flags=re.IGNORECASE)
         inicio_bloque = enlace.end()
         if not fechas:
             continue  # sin fecha legible no se puede armar el nombre del Excel de cuadros
@@ -233,10 +234,11 @@ def leer_cuadro_capitulo27(ruta: Path) -> dict:
         raise ValueError(f"{ruta.name}: años inesperados {anio_actual} y {anio_anterior}")
     numero_mes = MESES_NOMBRE.index(mes_nombre) + 1
 
-    def fila(prefijo):
-        return next(r for r in range(hoja.nrows) if _texto(hoja.cell_value(r, 0)).startswith(prefijo))
+    def fila(*prefijos):
+        return next(r for r in range(hoja.nrows) if _texto(hoja.cell_value(r, 0)).startswith(prefijos))
 
-    filas = {"saldo": fila("Balanza comercial"), "expo": fila("Exportación del capítulo 27"),
+    # El saldo se llama "Balanza comercial" (y en informes anteriores a 2025, "Exportaciones netas").
+    filas = {"saldo": fila("Balanza comercial", "Exportaciones netas"), "expo": fila("Exportación del capítulo 27"),
              "impo": fila("Importación del capítulo 27")}
 
     def valores(columna):
