@@ -221,3 +221,7 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# La Base de Babel: descargas originales (no se suben; se regeneran con los scripts)
+datos/crudos/*
+!datos/crudos/.gitkeep
