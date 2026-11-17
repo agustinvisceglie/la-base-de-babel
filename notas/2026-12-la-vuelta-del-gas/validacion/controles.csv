@@ -1,0 +1,9 @@
+control,estado,detalle
+Serie mensual capítulo 27 sin meses faltantes,OK,01/2005 a 09/2026; faltan: []
+Serie mensual rubros y usos sin meses faltantes,OK,01/2004 a 09/2026; faltan: []
+Cuadros cap. 27: saldo = expo - impo,OK,diferencia máxima 0.000000 MUSD
+"0 <= capítulo 27 <= total, todos los meses",OK,exportaciones e importaciones
+"Rubros y usos mensual = anuales oficiales (totales, CyE, CyL)",OK,2004-2025; diferencia máxima 0.001624 MUSD
+Rubros y usos ene-09/2026 = acumulado del cuadro 1,OK,diferencia máxima 0.000000 MUSD
+Rubros y usos ene-09/2025 = acumulado del cuadro 1,OK,diferencia máxima 0.000000 MUSD
+Unidades de los cuadros por capítulo (total del cuadro / total oficial),OK,cociente entre 0.9884 y 1.0522

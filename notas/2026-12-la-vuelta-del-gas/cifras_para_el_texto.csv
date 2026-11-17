@@ -1,0 +1,7 @@
+periodo,expo_cap27_musd,impo_cap27_musd,saldo_cap27_musd,saldo_comercial_bienes_musd,peso_saldo_cap27_pct,fuente
+2023,6563.1,7763.0,-1200.0,-6860.6,17.5,"Anual oficial: INDEC, exp_ncm_21_25.xls y imp_ncm_21_25.xls; exp_gr_80 e imp_uso_econ_80 (saldo de bienes)"
+2024,8239.2,3777.8,4461.4,18927.6,23.6,"Anual oficial: INDEC, exp_ncm_21_25.xls y imp_ncm_21_25.xls; exp_gr_80 e imp_uso_econ_80 (saldo de bienes)"
+2025,9717.8,3042.5,6675.3,11320.1,59.0,"Anual oficial: INDEC, exp_ncm_21_25.xls y imp_ncm_21_25.xls; exp_gr_80 e imp_uso_econ_80 (saldo de bienes)"
+2025 ene-sep,7074.7,2571.5,4503.2,6046.2,74.5,Acumulado oficial del informe ICA del 19/10/2026 (cuadro 8 y cuadro 1)
+2026 ene-sep,10786.9,2787.2,7999.6,21198.3,37.7,Acumulado oficial del informe ICA del 19/10/2026 (cuadro 8 y cuadro 1)
+12 meses a sep-2026,13429.9,3258.3,10171.6,26472.2,38.4,Derivado de oficiales: 2025 + ene-sep 2026 - ene-sep 2025
