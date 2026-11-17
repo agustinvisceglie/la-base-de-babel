@@ -18,6 +18,7 @@ Repositorio de datos y código de "Sobre Modelos y Tumbas", publicación de Agus
 - Toda serie tiene documentado: organismo, ID o URL exacta, unidad, frecuencia y fecha de descarga.
 - Las unidades van en el nombre de la columna (`_musd` = millones de USD, `_kbbl_d` = miles de barriles por día, `_mm3_d` = millones de m3 por día).
 - Las descargas originales van a `datos/crudos/` y no se modifican; la limpieza genera archivos nuevos en `datos/procesados/`.
+- Cuando una serie tenga valores estimados (por ejemplo, por secreto estadístico o por faltantes), marcarlos en una columna 'fuente' y, en toda nota o gráfico que los use o los cite, incluir una aclaración que diga qué se estimó y cómo.
 
 ## Controles obligatorios antes de dar por bueno un número
 1. Unidades: millones vs. miles, m3 vs. barriles, mensual vs. acumulado.
