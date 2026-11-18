@@ -19,8 +19,9 @@ Qué hace este script:
     3. g1, g2 (CSV para Datawrapper y PNG de control) y cifras para citar en el texto. Las cifras
        salen solo de anuales y acumulados oficiales, nunca de sumar meses.
     4. Controles: lo leído vs. lo publicado en el PDF del informe; suma de meses vs. anuales y
-       acumulados oficiales; primera publicación vs. dato vigente de cada año; y valores de
-       referencia publicados por terceros (2024 = 5.668, 2025 = 7.815, ene-ago 2026 = 7.834).
+       acumulados oficiales; primera publicación vs. dato vigente de cada año desde 2022; y
+       valores de referencia publicados por terceros (2022 = -4.470, 2024 = 5.668, 2025 = 7.815,
+       ene-ago 2026 = 7.834).
     5. Control con el capítulo 27: serie mensual derivada de los acumulados oficiales de cada
        informe (y de la API de Series de Tiempo para los meses anteriores) y comparación con CyE - CyL.
 
@@ -76,12 +77,16 @@ PRIMER_ANIO_NOTA = 2004
 MES_DE_CORTE = pd.Timestamp("2026-09-01")
 
 # Saldo CyE - CyL publicado por terceros (valores de referencia validados en el chat del proyecto;
-# ver criterios-metodologicos.md). (período, año, hasta el mes, valor, quién lo publicó)
+# ver criterios-metodologicos.md y auditoria-etapa-1-ica.md).
+# (período, año, hasta el mes, saldo, CyE, CyL, quién lo publicó); None = no se conoce el componente.
 REFERENCIAS_SALDO_CYE_CYL = [
-    ("2024", 2024, 12, 5668, "Secretaría de Energía"),
-    ("2025", 2025, 12, 7815, "IARAF (N. Argañaraz)"),
-    ("2026 ene-ago", 2026, 8, 7834, "Economía & Energía (N. Arceo) y RICSA ALyC"),
+    ("2022", 2022, 12, -4470, 8398, 12868, "IAE Mosconi y Más Energía"),
+    ("2024", 2024, 12, 5668, None, None, "Secretaría de Energía"),
+    ("2025", 2025, 12, 7815, None, None, "IARAF (N. Argañaraz)"),
+    ("2026 ene-ago", 2026, 8, 7834, None, None, "Economía & Energía (N. Arceo) y RICSA ALyC"),
 ]
+# Primer año del contraste anual vigente vs. informes de diciembre (primera publicación y revisión).
+PRIMER_ANIO_CONTRASTE = 2022
 
 # API de Series de Tiempo: capítulo 27, mensual, millones de USD (exportaciones FOB, importaciones CIF).
 SERIES_API_CAP27 = {
@@ -177,8 +182,8 @@ def bajar_datos() -> dict:
         cuadro = {"fecha_publicacion": informe.fecha_publicacion, "url_interactivo": informe.url_interactivo,
                   "cap27": indec.leer_cuadro_capitulo27(ruta), "cuadro1": indec.leer_cuadro1_acumulado(ruta),
                   "rubros_usos": indec.leer_cuadro_rubros_usos(ruta)}
-        if cuadro["rubros_usos"]["mes"] != cuadro["cap27"]["mes"]:
-            raise ValueError(f"{ruta.name}: los cuadros de rubros y usos y del capítulo 27 son de meses distintos")
+        if not cuadro["rubros_usos"]["mes"] == cuadro["cap27"]["mes"] == cuadro["cuadro1"]["mes"]:
+            raise ValueError(f"{ruta.name}: el cuadro 1, el de rubros y usos y el del capítulo 27 son de meses distintos")
         if cuadro["rubros_usos"]["mes"] > MES_DE_CORTE:
             print(f"    se ignora el informe del {informe.fecha_publicacion:%d/%m/%Y}: es posterior al corte")
             continue
@@ -431,10 +436,12 @@ def armar_cifras_para_el_texto(anual: pd.DataFrame, ultimo: dict, rutas: dict) -
         "fuente": f"Derivado de oficiales: {anio_completo} + ene-{mes_texto} {mes.year} - ene-{mes_texto} {mes.year - 1}",
     })
     cifras = pd.DataFrame(filas).set_index("periodo")
-    cifras.insert(4, "peso_saldo_energetico_pct", 100 * cifras["saldo_cye_cyl_musd"] / cifras["saldo_comercial_bienes_musd"])
-    # Si los dos saldos tienen signos distintos, el cociente no es un "peso": se avisa.
+    # Peso del saldo energético en el saldo de bienes. Si los dos saldos tienen signos distintos,
+    # el cociente no es un "peso": la celda queda vacía (para que no se copie a un gráfico) y se avisa.
     signos_distintos = (cifras["saldo_cye_cyl_musd"] > 0) != (cifras["saldo_comercial_bienes_musd"] > 0)
-    cifras.insert(5, "nota", ["Signos distintos: el cociente no se lee como peso" if s else "" for s in signos_distintos])
+    peso = 100 * cifras["saldo_cye_cyl_musd"] / cifras["saldo_comercial_bienes_musd"]
+    cifras.insert(4, "peso_saldo_energetico_pct", peso.mask(signos_distintos))
+    cifras.insert(5, "nota", ["Signos distintos: no se calcula el peso" if s else "" for s in signos_distintos])
     return cifras
 
 
@@ -597,10 +604,11 @@ def contrastar_anuales(anual: pd.DataFrame, informes_todos: pd.DataFrame, anios:
 
 def contrastar_referencias(anuales_cye: pd.DataFrame, cuadros: list[dict], ica: pd.DataFrame, anual: pd.DataFrame) -> pd.DataFrame:
     """Saldo CyE - CyL publicado por terceros vs. la primera publicación del INDEC de ese período
-    (tiene que coincidir, salvo redondeo) y vs. el dato vigente (la diferencia son revisiones)."""
+    (tiene que coincidir, salvo redondeo) y vs. el dato vigente (la diferencia son revisiones).
+    Si la referencia trae también CyE y CyL, se contrastan los dos componentes."""
     por_mes = {c["rubros_usos"]["mes"]: c for c in cuadros}
     filas = []
-    for periodo, anio, hasta_mes, referencia, quien in REFERENCIAS_SALDO_CYE_CYL:
+    for periodo, anio, hasta_mes, referencia, ref_expo, ref_impo, quien in REFERENCIAS_SALDO_CYE_CYL:
         if hasta_mes == 12:
             pub = anuales_cye[(anuales_cye["anio"] == anio) & (anuales_cye["version"] == "primera publicación")].iloc[0]
             primera, informe = pub["saldo_informe"], f"informe ICA del {pub['informe']} (hojas {pub['hojas']})"
@@ -618,11 +626,16 @@ def contrastar_referencias(anuales_cye: pd.DataFrame, cuadros: list[dict], ica: 
             meses = ica.loc[f"{anio}-01-01":f"{anio}-{hasta_mes:02d}-01"]
             expo_vig, impo_vig = meses["expo_cye_musd"].sum(), meses["impo_cyl_musd"].sum()
             fuente_vigente = f"suma de ene-{hasta_mes:02d} de la serie mensual del informe del corte (control, no para citar)"
+        difs = [primera - referencia]
+        if ref_expo is not None:
+            difs += [expo_primera - ref_expo, impo_primera - ref_impo]
         filas.append({
             "periodo": periodo, "referencia_publicada": referencia, "publicado_por": quien,
-            "primera_publicacion_indec": primera, "fuente_primera_publicacion": informe,
+            "referencia_expo_cye": ref_expo, "referencia_impo_cyl": ref_impo,
+            "primera_publicacion_indec": primera, "expo_cye_primera": expo_primera, "impo_cyl_primera": impo_primera,
+            "fuente_primera_publicacion": informe,
             "dif_primera_vs_referencia": primera - referencia,
-            "estado": "OK" if abs(primera - referencia) <= TOLERANCIA_MUSD else "REVISAR",
+            "estado": "OK" if max(abs(d) for d in difs) <= TOLERANCIA_MUSD else "REVISAR",
             "vigente": expo_vig - impo_vig, "fuente_vigente": fuente_vigente,
             "dif_vigente_vs_referencia": expo_vig - impo_vig - referencia,
             "dif_expo_cye_vigente_vs_primera": expo_vig - expo_primera,
@@ -742,7 +755,7 @@ def main():
     publicados = control_publicados(cuadros)
     anio_completo = ultimo["rubros_usos"]["mes"].year - 1
     anuales_cye, anuales_27, regs = contrastar_anuales(anual, datos["informes_todos"],
-                                                       list(range(anio_completo - 2, anio_completo + 1)))
+                                                       list(range(PRIMER_ANIO_CONTRASTE, anio_completo + 1)))
     datos["registros"] += regs
     referencias = contrastar_referencias(anuales_cye, cuadros, ica, anual)
     cye_vs_27 = comparar_cye_cyl_con_cap27(anual, ultimo)
@@ -758,7 +771,7 @@ def main():
     generales = pd.concat([generales, pd.DataFrame([
         {"control": f"12 meses derivado de oficiales = último punto de g2 ({g2.index[-1]:%m/%Y})",
          "estado": "OK" if dif_12m < 0.01 else "REVISAR", "detalle": f"diferencia máxima {dif_12m:.6f} MUSD"},
-        {"control": "Saldo CyE - CyL publicado por terceros = primera publicación del INDEC (5.668, 7.815, 7.834)",
+        {"control": "Saldo CyE - CyL publicado por terceros = primera publicación del INDEC (-4.470, 5.668, 7.815, 7.834)",
          "estado": "OK" if (referencias["estado"] == "OK").all() else "REVISAR",
          "detalle": "; ".join(f"{r.periodo}: {r.primera_publicacion_indec:.1f} vs {r.referencia_publicada}" for r in referencias.itertuples())},
         {"control": "Capítulo 27 (control): unidades de los cuadros por capítulo (total del cuadro / total oficial)",

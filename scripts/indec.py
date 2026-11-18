@@ -17,8 +17,8 @@ Qué hace:
       del capítulo 27 de la NCM (combustibles minerales): mes del informe, mismo mes del año
       anterior y, si está, el acumulado del año.
     - leer_cuadro1_acumulado(): lee del cuadro 1 el acumulado del año de exportaciones,
-      importaciones y saldo comercial de bienes. Probado solo en informes de marzo a noviembre:
-      en los de diciembre y febrero la fila del acumulado se llama distinto.
+      importaciones y saldo comercial de bienes, en informes de cualquier mes (la fila del
+      acumulado se llama distinto en enero, febrero y diciembre; ver tests/test_indec.py).
     - leer_cuadro_rubros_usos(): lee, del Excel de cuadros de un informe, las exportaciones de
       Combustibles y energía (CyE) y las importaciones de Combustibles y lubricantes (CyL), del
       mes y acumuladas, para el año en curso y el anterior.
@@ -264,20 +264,45 @@ def leer_cuadro_capitulo27(ruta: Path) -> dict:
 def leer_cuadro1_acumulado(ruta: Path) -> dict:
     """Lee del cuadro 1 del Excel de cuadros el acumulado del año (año en curso y anterior).
 
-    Devuelve {"actual": {"expo", "impo", "saldo"}, "anterior": {...}} en millones de USD.
-    En los informes de enero, el acumulado es la fila del mes de enero.
+    El mes del informe es el último mes con dato del año en curso. La fila del acumulado se
+    llama distinto según ese mes:
+        enero      -> no hay fila aparte: el acumulado es la fila "Enero"
+        febrero    -> "Total bimestre" (en el PDF, "Primer bimestre")
+        diciembre  -> "Total anual" (no hay fila "Acumulado")
+        el resto   -> "Acumulado hasta <mes>"
+    Control: el acumulado tiene que ser igual a la suma de los meses de enero al mes del informe,
+    en los dos años; si no, falla (así no se toma una fila equivocada sin aviso). La tolerancia es
+    0,5 por mes sumado, porque hasta 2024 los cuadros venían redondeados a millones y "los totales
+    por suma pueden no coincidir por redondeo" (nota del cuadro); una fila equivocada difiere en miles.
+    Devuelve {"mes", "actual": {"expo", "impo", "saldo"}, "anterior": {...}} en millones de USD.
     """
     hoja = _hoja_por_titulo(xlrd.open_workbook(ruta), "Cuadro 1.")
-    fila = next((r for r in range(hoja.nrows) if _texto(hoja.cell_value(r, 1)).startswith("Acumulado")), None)
-    if fila is None:
-        fila = next(r for r in range(hoja.nrows) if _texto(hoja.cell_value(r, 1)) == "Enero")
+    etiquetas = [_texto(hoja.cell_value(r, 1)) for r in range(hoja.nrows)]
+    filas_mes = {MESES_NOMBRE.index(e.lower()) + 1: r for r, e in enumerate(etiquetas) if e.lower() in MESES_NOMBRE}
+    meses_con_dato = sorted(m for m, r in filas_mes.items() if isinstance(hoja.cell_value(r, 2), float))
+    numero_mes = meses_con_dato[-1]
+    if meses_con_dato != list(range(1, numero_mes + 1)):
+        raise ValueError(f"{ruta.name}: meses con dato inesperados en el cuadro 1: {meses_con_dato}")
+    anio = next(int(re.match(r"\d{4}", _texto(hoja.cell_value(r, 2))).group()) for r in range(2, 10)
+                if re.match(r"\d{4}", _texto(hoja.cell_value(r, 2))))
 
-    def leer(columna):
-        return float(hoja.cell_value(fila, columna))
+    if numero_mes == 1:
+        fila = filas_mes[1]
+    else:
+        prefijos = ("Acumulado", "Total bimestre", "Primer bimestre") + (("Total anual",) if numero_mes == 12 else ())
+        fila = next(r for r, e in enumerate(etiquetas) if e.startswith(prefijos))
 
     # Columnas: exportaciones (2 = año en curso, 3 = anterior), importaciones (6, 7), saldo (10, 11).
-    return {"actual": {"expo": leer(2), "impo": leer(6), "saldo": leer(10)},
-            "anterior": {"expo": leer(3), "impo": leer(7), "saldo": leer(11)}}
+    columnas = {"actual": {"expo": 2, "impo": 6, "saldo": 10}, "anterior": {"expo": 3, "impo": 7, "saldo": 11}}
+    resultado = {"mes": pd.Timestamp(anio, numero_mes, 1)}
+    for clave, cols in columnas.items():
+        resultado[clave] = {flujo: float(hoja.cell_value(fila, c)) for flujo, c in cols.items()}
+        for flujo, c in cols.items():
+            suma = sum(float(hoja.cell_value(filas_mes[m], c)) for m in range(1, numero_mes + 1))
+            if abs(suma - resultado[clave][flujo]) > 0.5 * numero_mes:
+                raise ValueError(f"{ruta.name}: la fila '{etiquetas[fila]}' no es la suma de enero a "
+                                 f"{MESES_NOMBRE[numero_mes - 1]} ({clave}, {flujo}: {resultado[clave][flujo]} vs {suma})")
+    return resultado
 
 
 def _hoja_por_patron(libro: xlrd.book.Book, patron: str) -> xlrd.sheet.Sheet:

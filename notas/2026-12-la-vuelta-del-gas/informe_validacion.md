@@ -38,7 +38,7 @@ Salen **solo de anuales y acumulados oficiales**, no de sumar meses. Archivo: `c
 | Ene–sep 2026 | 12.452,3 | 3.024,5 | 9.427,8 | 21.198,3 | 44,5% |
 | 12 meses a sep-2026 (2) | 15.446,5 | 3.548,7 | 11.897,7 | 26.472,2 | 44,9% |
 
-1. En 2023 los saldos tienen signos distintos: el energético es positivo (+41,0, dato vigente) y el de bienes, negativo. El cociente (−0,6%) no se lee como peso. Además, el signo del saldo energético de 2023 cambió con las revisiones del INDEC (ver "Historial de 2023").
+1. En 2023 los saldos tienen signos distintos: el energético es positivo (+41,0, dato vigente) y el de bienes, negativo. El cociente no es un peso, así que en el CSV la celda queda vacía y la columna `nota` lo dice. Además, el signo del saldo energético de 2023 cambió con las revisiones del INDEC (ver "Historial de 2023").
 2. Derivado solo de cifras oficiales: anual 2025 + acumulado ene–sep 2026 − acumulado ene–sep 2025. Coincide exactamente (diferencia 0,0) con la suma de los últimos 12 meses de la serie mensual (último punto de g2).
 
 **Dato provisorio o estimado:** 2024 y 2025 son provisorios (marca * en los cuadros anuales). En el informe del 19/10/2026, las exportaciones de 2026 figuran como estimadas (2026e) y las importaciones como provisorias (2026*). Son marcas del INDEC; no hay valores estimados por nosotros.
@@ -57,20 +57,22 @@ Los cuadros anuales vienen en miles de USD y se pasan a millones.
 
 ### Contraste con las cifras publicadas
 
-Los valores de referencia son los validados en el chat del proyecto (`criterios-metodologicos.md`). Para cada uno se buscó la **primera publicación del INDEC** de ese período: tiene que coincidir, salvo redondeo. La diferencia con el **dato vigente** son revisiones posteriores del INDEC. Archivo: `validacion/cye_cyl_vs_referencias_publicadas.csv`.
+Los valores de referencia son los validados en el chat del proyecto (`criterios-metodologicos.md` y `auditoria-etapa-1-ica.md`). Para cada uno se buscó la **primera publicación del INDEC** de ese período: tiene que coincidir, salvo redondeo. La diferencia con el **dato vigente** son revisiones posteriores del INDEC. Archivo: `validacion/cye_cyl_vs_referencias_publicadas.csv`.
 
 | Período | Referencia publicada | Publicada por | Primera publicación del INDEC | Dato vigente | Vigente − primera publicación | Expo CyE | Impo CyL |
 |---|---:|---|---|---:|---:|---:|---:|
+| 2022 | −4.470 (CyE 8.398; CyL 12.868) | IAE Mosconi y Más Energía | −4.470,0 (informe ICA del 19/01/2023, cuadros 4 y 6: CyE 8.398; CyL 12.868) | −4.386,4 | +83,6 | +191,0 | +107,4 |
 | 2024 | 5.668 | Secretaría de Energía | 5.667,8 (informe ICA del 20/01/2025, cuadros 4 y 6) | 5.730,0 | +62,2 | +40,5 | −21,7 |
 | 2025 | 7.815 | IARAF (N. Argañaraz) | 7.815,1 (informe ICA del 20/01/2026, cuadros 12 y 14) | 7.829,1 | +14,0 | +14,0 | 0,0 |
 | Ene–ago 2026 | 7.834 | Economía & Energía (N. Arceo) y RICSA | 7.834,5 (informe ICA del 18/09/2026, cuadros 12 y 14) | 7.827,9 (1) | −6,6 | +4,0 | +10,6 |
 
 1. Suma de enero a agosto de la serie mensual del informe del corte. Es un control: no se cita.
 
-- **Las tres referencias coinciden con la primera publicación del INDEC** (diferencias de −0,2, +0,1 y +0,5, por redondeo).
+- **Las cuatro referencias coinciden con la primera publicación del INDEC** (diferencias de 0,0, −0,2, +0,1 y +0,5, por redondeo). En 2022 coinciden también los dos componentes.
+- **2022:** el saldo vigente es 83,6 menos negativo que el publicado en enero de 2023. Se revisaron hacia arriba los dos componentes: CyE en +191,0 (a 8.589,0) y CyL en +107,4 (a 12.975,4). La revisión de un año después (informe del 18/01/2024) ya había subido CyE a 8.509 y dejaba CyL en 12.868 (saldo −4.359); la de CyL llegó después.
 - **2024:** el INDEC revisó el año en el informe del 20/01/2026, que ya trae 5.730,0. Es el valor vigente.
 - **2025:** el anual vigente (`exp_gr_80_25.xls`) supera en 14,0 a lo publicado en enero de 2026, todo por exportaciones. Es el caso que menciona `criterios-metodologicos.md` (7.815 contra 7.829). La versión revisada un año después sale en enero de 2027.
-- Los informes usados son [`ica_cuadros_20_01_25.xls`](https://www.indec.gob.ar/ftp/cuadros/economia/ica_cuadros_20_01_25.xls), [`ica_cuadros_20_01_26.xls`](https://www.indec.gob.ar/ftp/cuadros/economia/ica_cuadros_20_01_26.xls) y [`ica_cuadros_18_09_26.xls`](https://www.indec.gob.ar/ftp/cuadros/economia/ica_cuadros_18_09_26.xls).
+- Los informes usados son [`ica_cuadros_19_01_23.xls`](https://www.indec.gob.ar/ftp/cuadros/economia/ica_cuadros_19_01_23.xls), [`ica_cuadros_20_01_25.xls`](https://www.indec.gob.ar/ftp/cuadros/economia/ica_cuadros_20_01_25.xls), [`ica_cuadros_20_01_26.xls`](https://www.indec.gob.ar/ftp/cuadros/economia/ica_cuadros_20_01_26.xls) y [`ica_cuadros_18_09_26.xls`](https://www.indec.gob.ar/ftp/cuadros/economia/ica_cuadros_18_09_26.xls).
 
 ### Historial de 2023 (cambio de signo)
 
@@ -129,18 +131,30 @@ El PDF se leyó por texto (con `pypdf`, fuera del repositorio). El archivo tambi
 - La serie mensual coincide con los anuales oficiales (2004–2025) y con los acumulados del informe del corte (ene–sep 2025 y 2026): totales contra el cuadro 1 y CyE y CyL contra los cuadros 12 y 14. Las diferencias son de 0,000.
 - En el informe del corte, los totales de los cuadros 12 y 14 coinciden con el cuadro 1.
 - El acumulado de 12 meses derivado de oficiales coincide con el último punto de g2.
-- Las tres referencias publicadas coinciden con la primera publicación del INDEC.
+- Las cuatro referencias publicadas coinciden con la primera publicación del INDEC.
+- En cada informe usado, el cuadro 1, el de rubros y usos y el del capítulo 27 son del mismo mes.
 
 **Control 3. Anual vigente vs. informes de diciembre** (`validacion/cye_cyl_anual_vs_informes.csv`). Diferencias de vigente menos informe:
 
 | Año | Versión | Informe | Saldo del informe | Saldo vigente | Dif. expo CyE | Dif. impo CyL | Dif. saldo |
 |---|---|---|---:|---:|---:|---:|---:|
+| 2022 | Primera publicación | 19/01/2023 | −4.470,0 | −4.386,4 | 191,0 | 107,4 | 83,6 |
+| 2022 | Revisada | 18/01/2024 | −4.359,0 | −4.386,4 | 80,0 | 107,4 | −27,4 |
 | 2023 | Primera publicación | 18/01/2024 | −46,0 | 41,0 | 49,6 | −37,4 | 87,0 |
 | 2023 | Revisada | 20/01/2025 | −13,4 | 41,0 | 17,0 | −37,4 | 54,4 |
 | 2024 | Primera publicación | 20/01/2025 | 5.667,8 | 5.730,0 | 40,5 | −21,7 | 62,2 |
 | 2024 | Revisada | 20/01/2026 | 5.730,0 | 5.730,0 | 0,0 | 0,0 | 0,0 |
 | 2025 | Primera publicación | 20/01/2026 | 7.815,1 | 7.829,1 | 14,0 | 0,0 | 14,0 |
 | 2025 | Revisada | Se publica en enero de 2027 | | | | | |
+
+Los informes de enero de 2023 y 2024 traen valores redondeados a millones.
+
+**Control 4. Lector del cuadro 1** (`tests/test_indec.py`, en la raíz del repositorio). La fila del acumulado del cuadro 1 se llama distinto según el mes del informe: "Total anual" en diciembre, "Total bimestre" en febrero (en el PDF, "Primer bimestre") y "Acumulado hasta..." el resto del año. La versión anterior del lector solo buscaba "Acumulado" y, si no la encontraba, tomaba la fila de enero. Por eso, en el informe de diciembre de 2025 leía un saldo de 162,1 (enero de 2025) en vez de 11.286. Esto no afectaba las cifras de la nota, que salen del informe de septiembre. Ahora:
+- el lector detecta el mes del informe, toma la fila que corresponde y verifica que sea la suma de los meses de enero a ese mes;
+- el test compara lo leído con el cuadro 1 del PDF de tres informes: diciembre de 2025 (20/01/2026, p. 7), febrero de 2026 (19/03/2026, p. 7) y septiembre de 2026 (19/10/2026, p. 7). También lo compara con los totales de los cuadros de rubros y usos del mismo Excel;
+- el lector se probó en los 23 Excel de cuadros descargados (publicados entre el 19/01/2023 y el 19/10/2026). En todos detecta el mismo mes que el cuadro de rubros y usos y coincide con sus totales: la diferencia máxima es 0,275, en el informe del 20/08/2025, porque el cuadro 14 de ese informe trae las importaciones redondeadas a millones enteros (43.718,0 contra 43.717,8 en el cuadro 1; en 2024, 33.185,0 contra 33.184,7).
+
+Para correrlo: `.venv/Scripts/python -m unittest discover -s tests -v`.
 
 ### Control: capítulo 27 de la NCM
 

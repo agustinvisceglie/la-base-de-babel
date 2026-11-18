@@ -13,6 +13,6 @@ Rubros y usos ene-09/2025: CyE y CyL = acumulados de las hojas c12 y c14,OK,dife
 Capítulo 27 (control): saldo = expo - impo en los cuadros,OK,diferencia máxima 0.000000 MUSD
 "Capítulo 27 (control): 0 <= capítulo 27 <= total, todos los meses",OK,exportaciones e importaciones
 12 meses derivado de oficiales = último punto de g2 (09/2026),OK,diferencia máxima 0.000000 MUSD
-"Saldo CyE - CyL publicado por terceros = primera publicación del INDEC (5.668, 7.815, 7.834)",OK,2024: 5667.8 vs 5668; 2025: 7815.1 vs 7815; 2026 ene-ago: 7834.5 vs 7834
+"Saldo CyE - CyL publicado por terceros = primera publicación del INDEC (-4.470, 5.668, 7.815, 7.834)",OK,2022: -4470.0 vs -4470; 2024: 5667.8 vs 5668; 2025: 7815.1 vs 7815; 2026 ene-ago: 7834.5 vs 7834
 Capítulo 27 (control): unidades de los cuadros por capítulo (total del cuadro / total oficial),OK,cociente entre 0.9884 y 1.0522
 Capítulo 27 (control): suma de los meses = acumulados oficiales del último informe,OK,diferencia máxima 0.000000 MUSD

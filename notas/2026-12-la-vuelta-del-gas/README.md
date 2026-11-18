@@ -32,7 +32,7 @@ El script baja los datos de las fuentes oficiales del INDEC, arma las series, ge
 | `graficos/g1_balanza_energetica_anual.csv` | Exportaciones de CyE, importaciones de CyL y saldo por año (2004–2025, anuales oficiales), más ene–sep del año anterior y del año en curso (acumulados oficiales). |
 | `graficos/g2_saldo_energetico_vs_total_12m.csv` | Saldo energético (CyE − CyL) y saldo comercial de bienes, suma de 12 meses, mensual desde diciembre de 2004. |
 | `graficos/*.png` | Gráficos rápidos para revisar los CSV (no son los de la nota). |
-| `validacion/` | Controles y comparaciones: valores leídos vs. publicados, primera publicación vs. dato vigente, referencias publicadas por terceros (5.668, 7.815, 7.834), CyE − CyL vs. capítulo 27, controles del capítulo 27, informes usados y registro de descargas. |
+| `validacion/` | Controles y comparaciones: valores leídos vs. publicados, primera publicación vs. dato vigente, referencias publicadas por terceros (−4.470, 5.668, 7.815, 7.834), CyE − CyL vs. capítulo 27, controles del capítulo 27, informes usados y registro de descargas. |
 
 Series limpias que genera la nota, en `datos/procesados/` (se pueden reusar en otras notas):
 

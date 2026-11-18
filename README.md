@@ -16,6 +16,7 @@ datos/
   procesados/      series limpias, listas para analizar y graficar
 scripts/           funciones reutilizables de descarga y limpieza, por fuente
 notas/             una carpeta por nota publicada, reproducible con un comando
+tests/             tests de los lectores de cuadros (python -m unittest discover -s tests -v)
 requirements.txt   paquetes de Python con sus versiones exactas
 ```
 

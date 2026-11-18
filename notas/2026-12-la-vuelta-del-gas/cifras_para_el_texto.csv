@@ -1,5 +1,5 @@
 periodo,expo_cye_musd,impo_cyl_musd,saldo_cye_cyl_musd,saldo_comercial_bienes_musd,peso_saldo_energetico_pct,nota,fuente
-2023,7927.6,7886.6,41.0,-6860.6,-0.6,Signos distintos: el cociente no se lee como peso,"Anual oficial: INDEC, exp_gr_80_25.xls (CyE y exportaciones totales) e imp_uso_econ_80_25.xls (CyL e importaciones totales)"
+2023,7927.6,7886.6,41.0,-6860.6,,Signos distintos: no se calcula el peso,"Anual oficial: INDEC, exp_gr_80_25.xls (CyE y exportaciones totales) e imp_uso_econ_80_25.xls (CyL e importaciones totales)"
 2024,9717.1,3987.1,5730.0,18927.6,30.3,,"Anual oficial (provisorio): INDEC, exp_gr_80_25.xls (CyE y exportaciones totales) e imp_uso_econ_80_25.xls (CyL e importaciones totales)"
 2025,11100.2,3271.1,7829.1,11320.1,69.2,,"Anual oficial (provisorio): INDEC, exp_gr_80_25.xls (CyE y exportaciones totales) e imp_uso_econ_80_25.xls (CyL e importaciones totales)"
 2025 ene-sep,8106.0,2746.9,5359.1,6046.2,88.6,,"Acumulado oficial del informe ICA del 19/10/2026 (hojas c12 y c14 del Excel de cuadros; saldo de bienes, cuadro 1)"
