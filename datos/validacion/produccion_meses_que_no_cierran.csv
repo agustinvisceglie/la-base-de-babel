@@ -1,0 +1,15 @@
+fecha,producto,subtipo,dif_volumen,unidad_volumen,dif_diaria,unidad_diaria,dif_pct_de_la_serie,pozos_shale_archivo_nc
+2007-01-01,petroleo,tight,-9.3599,m3,-0.0019,kbbl/d,-1.0298,108.0000
+2007-01-01,gas,tight,-690.3741,miles de m3,-0.0223,MMm3/d,-1.9954,108.0000
+2015-06-01,petroleo,shale,-163.3620,m3,-0.0343,kbbl/d,-0.1551,508.0000
+2015-06-01,petroleo,tight,-135.4439,m3,-0.0284,kbbl/d,-0.8444,508.0000
+2015-06-01,gas,shale,-1344.3904,miles de m3,-0.0448,MMm3/d,-1.4394,508.0000
+2015-06-01,gas,tight,-2755.5760,miles de m3,-0.0919,MMm3/d,-0.5473,508.0000
+2019-01-01,petroleo,shale,-501.6900,m3,-0.1018,kbbl/d,-0.1307,1025.0000
+2019-01-01,petroleo,tight,-2128.9400,m3,-0.4320,kbbl/d,-5.3325,1025.0000
+2019-01-01,gas,shale,-220.9000,miles de m3,-0.0071,MMm3/d,-0.0248,1025.0000
+2019-01-01,gas,tight,-41243.4180,miles de m3,-1.3304,MMm3/d,-5.4929,1025.0000
+2019-03-01,petroleo,shale,-18024.1600,m3,-3.6570,kbbl/d,-4.7860,1032.0000
+2019-03-01,gas,shale,-2957.7300,miles de m3,-0.0954,MMm3/d,-0.3260,1032.0000
+2024-09-01,petroleo,shale,-157933.3700,m3,-33.1124,kbbl/d,-7.9046,2410.0000
+2024-09-01,gas,shale,-16174.0400,miles de m3,-0.5391,MMm3/d,-0.6856,2410.0000

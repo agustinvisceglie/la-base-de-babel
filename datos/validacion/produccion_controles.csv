@@ -1,0 +1,26 @@
+control,estado,detalle
+Serie agregada de petróleo: sin meses faltantes ni duplicados,OK,"01/2006 a 09/2026, 249 meses"
+Serie agregada de petróleo: sin vacíos ni negativos,OK,
+Serie agregada de gas: sin meses faltantes ni duplicados,OK,"01/2006 a 09/2026, 249 meses"
+Serie agregada de gas: sin vacíos ni negativos,OK,
+Unidades petróleo: total_diario de la SE = total / días (total en m3 por mes),OK,diferencia máxima 0.000050 m3/d
+Factor: kbbl_diario de la SE = m3/d × 6.28981 / 1.000,OK,diferencia máxima 0.000186 kbbl/d
+"Unidades gas: total_diario de la SE = total / días / 1.000 (total en miles de m3 por mes, diario en MMm3/d)",OK,diferencia máxima 0.000050 MMm3/d
+No convencional de la SE = shale + tight (participación publicada vs. (shale + tight) / total),OK,diferencia máxima 0.000050 puntos porcentuales
+"Convencional (total - shale - tight) >= 0, todos los meses",OK,petróleo y gas
+Convencional de la serie (petróleo) = pozos que no son NO CONVENCIONAL en el archivo anual 2026,OK,"6 meses en que las dos versiones coinciden (01/2026, 02/2026, 03/2026, 04/2026, 05/2026, 07/2026); diferencia máxima 0.046; composición por tipo de recurso: {'CONVENCIONAL': 8015650.7, 'NO DISCRIMINADO': 0.0, 'SIN RESERVORIO': 0.0}"
+Convencional de la serie (gas) = pozos que no son NO CONVENCIONAL en el archivo anual 2026,OK,"6 meses en que las dos versiones coinciden (01/2026, 02/2026, 03/2026, 04/2026, 05/2026, 07/2026); diferencia máxima 0.016; composición por tipo de recurso: {'CONVENCIONAL': 8550996.1, 'NO DISCRIMINADO': 0.0, 'SIN RESERVORIO': 6117.1}"
+Total = suma de las cinco cuencas,OK,"petróleo: diferencia máxima 0.0062% (43 meses, 04/2008 a 11/2013); gas: 0.000000%"
+"Archivo no convencional vs. serie agregada: petroleo shale, 249 meses",DIFERENCIAS,"2015-06: -163.4; 2019-01: -501.7; 2019-03: -18,024.2; 2024-09: -157,933.4"
+"Archivo no convencional vs. serie agregada: petroleo tight (tight + pozos no convencionales sin subtipo), 249 meses",DIFERENCIAS,"2007-01: -9.4; 2015-06: -135.4; 2019-01: -2,128.9"
+"Archivo no convencional vs. serie agregada: gas shale, 249 meses",DIFERENCIAS,"2015-06: -1,344.4; 2019-01: -220.9; 2019-03: -2,957.7; 2024-09: -16,174.0"
+"Archivo no convencional vs. serie agregada: gas tight (tight + pozos no convencionales sin subtipo), 249 meses",DIFERENCIAS,"2007-01: -690.4; 2015-06: -2,755.6; 2019-01: -41,243.4"
+Regla 'no convencional sin subtipo = tight' (petroleo): meses con pozos sin subtipo en que cierra cada hipótesis,EVIDENCIA,"64 meses con pozos sin subtipo; cierra si no se cuentan: 0, si son tight: 64, si son shale: 0"
+Regla 'no convencional sin subtipo = tight' (gas): meses con pozos sin subtipo en que cierra cada hipótesis,EVIDENCIA,"64 meses con pozos sin subtipo; cierra si no se cuentan: 0, si son tight: 64, si son shale: 0"
+Cobertura 2015: pozo-mes NO CONVENCIONAL del archivo anual completo vs. archivo no convencional,OK,"en los dos 12841, solo en el anual 0, solo en el no convencional 0, con petróleo distinto 0"
+Cobertura 2024: pozo-mes NO CONVENCIONAL del archivo anual completo vs. archivo no convencional,OK,"en los dos 48451, solo en el anual 0, solo en el no convencional 0, con petróleo distinto 0"
+Cobertura 2026: pozo-mes NO CONVENCIONAL del archivo anual completo vs. archivo no convencional,OK,"en los dos 44630, solo en el anual 0, solo en el no convencional 0, con petróleo distinto 0"
+"Archivo anual completo 2015 (todos los pozos) vs. serie agregada, por mes (total, shale y tight)",DIFERENCIAS,"12 meses; petróleo total: 2015-06 -103,042.5; petróleo shale: 2015-06 -163.4; petróleo tight: 2015-06 -135.4; gas total: 2015-06 -112,934.1; gas shale: 2015-06 -1,344.4"
+"Archivo anual completo 2024 (todos los pozos) vs. serie agregada, por mes (total, shale y tight)",DIFERENCIAS,"12 meses; petróleo total: 2024-09 -157,933.4; petróleo shale: 2024-09 -157,933.4; gas total: 2024-09 -16,174.1; gas shale: 2024-09 -16,174.0"
+"Archivo anual completo 2026 (todos los pozos) vs. serie agregada, por mes (total, shale y tight)",DIFERENCIAS,"9 meses; petróleo total: 2026-06 -5,016.6, 2026-08 11,906.0, 2026-09 12,027.1; gas total: 2026-06 -18,668.7, 2026-08 2,087.9, 2026-09 1,827.8"
+Ninguna serie tiene meses posteriores al último mes completo de la fuente oficial (último mes de la serie agregada),OK,"último mes completo 09/2026; produccion_petroleo_gas_mensual hasta 09/2026, produccion_vaca_muerta_mensual hasta 09/2026"

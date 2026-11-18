@@ -6,14 +6,20 @@ Qué hace:
       Devuelve un registro con la URL, la ruta local, la fecha y hora de descarga,
       el tamaño y el hash SHA-256 (sirve para saber si el archivo cambió entre corridas).
     - guardar_registro(): escribe en un CSV la lista de descargas de una corrida.
+    - guardar_version(): guarda una copia de un archivo descargado en la carpeta versiones/, con
+      la fecha de publicación y el hash en el nombre, si esa versión todavía no estaba guardada.
+      Nunca pisa una versión anterior. Anota cada versión nueva en datos/validacion/versiones_crudos.csv
+      (que se sube a GitHub: así queda qué versión de cada fuente existía en cada momento).
 
 Fuentes: cualquiera. Lo usan los módulos por fuente (api_series_tiempo.py, indec.py, etc.).
-Genera: los archivos descargados (en datos/crudos/, que no se sube a GitHub) y el CSV de registro.
+Genera: los archivos descargados (en datos/crudos/, que no se sube a GitHub), sus versiones
+    (en datos/crudos/<fuente>/versiones/) y los CSV de registro.
 """
 
 from __future__ import annotations
 
 import hashlib
+import shutil
 from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -25,6 +31,7 @@ import requests
 RAIZ = Path(__file__).resolve().parents[1]
 CRUDOS = RAIZ / "datos" / "crudos"
 PROCESADOS = RAIZ / "datos" / "procesados"
+REGISTRO_VERSIONES = RAIZ / "datos" / "validacion" / "versiones_crudos.csv"
 
 # Encabezado genérico: algunos sitios rechazan pedidos sin "User-Agent".
 ENCABEZADOS = {"User-Agent": "Mozilla/5.0 (compatible; descarga-datos-publicos/1.0)"}
@@ -85,3 +92,31 @@ def guardar_registro(registros: list[dict], ruta_csv: Path) -> None:
     ruta_csv = Path(ruta_csv)
     ruta_csv.parent.mkdir(parents=True, exist_ok=True)
     pd.DataFrame(registros).to_csv(ruta_csv, index=False)
+
+
+def guardar_version(registro: dict, fecha_publicacion: str) -> dict:
+    """Guarda una copia del archivo descargado como versión, sin pisar ninguna anterior.
+
+    La copia va a <carpeta del archivo>/versiones/<nombre>__<fecha de publicación>__<12 primeros
+    caracteres del hash>.<extensión>. Si ya hay una versión con ese hash, no se copia de nuevo.
+    `fecha_publicacion` es la fecha en que la fuente actualizó el archivo (por ejemplo, la fecha
+    de última modificación que informa el portal); si no se conoce, se usa la de descarga.
+    Devuelve el registro con la ruta de la versión y si es nueva.
+    """
+    archivo = RAIZ / registro["archivo"]
+    carpeta = archivo.parent / "versiones"
+    carpeta.mkdir(exist_ok=True)
+    fecha = (fecha_publicacion or registro["fecha_descarga"])[:10]
+    ya_guardadas = list(carpeta.glob(f"{archivo.stem}__*__{registro['sha256'][:12]}{archivo.suffix}"))
+    nueva = not ya_guardadas
+    version = ya_guardadas[0] if ya_guardadas else carpeta / f"{archivo.stem}__{fecha}__{registro['sha256'][:12]}{archivo.suffix}"
+    if nueva:
+        shutil.copy2(archivo, version)
+        fila = pd.DataFrame([{"archivo": registro["archivo"], "version": version.relative_to(RAIZ).as_posix(),
+                              "url": registro["url"], "fecha_publicacion": fecha_publicacion,
+                              "fecha_descarga": registro["fecha_descarga"], "bytes": registro["bytes"],
+                              "sha256": registro["sha256"]}])
+        REGISTRO_VERSIONES.parent.mkdir(parents=True, exist_ok=True)
+        fila.to_csv(REGISTRO_VERSIONES, mode="a", header=not REGISTRO_VERSIONES.exists(), index=False)
+    return {**registro, "version": version.relative_to(RAIZ).as_posix(), "version_nueva": nueva,
+            "fecha_publicacion": fecha_publicacion}

@@ -14,7 +14,9 @@ Cada nota de la publicación que usa datos tiene su carpeta con el código que b
 datos/
   crudos/          descargas originales de cada fuente (no se suben: se regeneran con los scripts)
   procesados/      series limpias, listas para analizar y graficar
+  validacion/      controles de las series genéricas
 scripts/           funciones reutilizables de descarga y limpieza, por fuente
+series/            armadores de series genéricas, no atadas a una nota (ubicación provisoria)
 notas/             una carpeta por nota publicada, reproducible con un comando
 tests/             tests de los lectores de cuadros (python -m unittest discover -s tests -v)
 requirements.txt   paquetes de Python con sus versiones exactas
