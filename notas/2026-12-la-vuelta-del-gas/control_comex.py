@@ -6,7 +6,7 @@ Qué hace: suma el capítulo 27 en la base de comercio exterior del INDEC (micro
     oficiales que usa la nota. Sirve para documentar por qué esa base no se usa como fuente
     principal: desde 2018 el secreto estadístico tapa parte de las exportaciones del capítulo 27.
 Fuentes: INDEC, bases exports_AAAA_M.zip e imports_AAAA_M.zip; datos/procesados/ica_anual.csv y
-    cifras_para_el_texto.csv (generados por 1_ica.py, que tiene que correr antes).
+    validacion/comparacion_cye_cyl_vs_cap27.csv (generados por 1_ica.py, que tiene que correr antes).
 Genera: validacion/cap27_comex_vs_oficial.csv y validacion/descargas_comex.csv
 
 Uso (desde la raíz del repositorio):
@@ -34,7 +34,8 @@ ANIOS_COMPLETOS = [2006, 2015, 2018, 2020, 2022, 2024, 2025]
 def main():
     sys.stdout.reconfigure(encoding="utf-8")
     anual = pd.read_csv(PROCESADOS / "ica_anual.csv", index_col="anio")
-    cifras = pd.read_csv(CARPETA_NOTA / "cifras_para_el_texto.csv", index_col="periodo")
+    # Acumulados oficiales del capítulo 27 del informe del corte (los guarda 1_ica.py).
+    cifras = pd.read_csv(VALIDACION / "comparacion_cye_cyl_vs_cap27.csv", index_col="periodo")
     ultimo_acumulado = [p for p in cifras.index if "ene-" in p][-1]   # por ejemplo "2026 ene-sep"
     anio_en_curso = int(ultimo_acumulado[:4])
 
@@ -48,7 +49,7 @@ def main():
         if anio == anio_en_curso:
             meses = int(sumas["expo"].index.max())
             periodo, oficial = ultimo_acumulado, cifras.loc[ultimo_acumulado]
-            fuente = "Acumulado oficial (cifras_para_el_texto.csv)"
+            fuente = "Acumulado oficial del informe del corte (validacion/comparacion_cye_cyl_vs_cap27.csv)"
         else:
             meses = 12
             periodo, oficial = str(anio), anual.loc[anio]

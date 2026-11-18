@@ -1,10 +1,18 @@
 control,estado,detalle
-Serie mensual capítulo 27 sin meses faltantes,OK,01/2005 a 09/2026; faltan: []
 Serie mensual rubros y usos sin meses faltantes,OK,01/2004 a 09/2026; faltan: []
-Cuadros cap. 27: saldo = expo - impo,OK,diferencia máxima 0.000000 MUSD
-"0 <= capítulo 27 <= total, todos los meses",OK,exportaciones e importaciones
+Serie mensual capítulo 27 (control) sin meses faltantes,OK,01/2004 a 09/2026; faltan: []
+Serie mensual rubros y usos: de enero de 2004 al mes de corte,OK,01/2004 a 09/2026
+"0 <= CyE <= exportaciones totales y 0 <= CyL <= importaciones totales, todos los meses",OK,
 "Rubros y usos mensual = anuales oficiales (totales, CyE, CyL)",OK,2004-2025; diferencia máxima 0.001624 MUSD
-Rubros y usos ene-09/2026 = acumulado del cuadro 1,OK,diferencia máxima 0.000000 MUSD
-Rubros y usos ene-09/2025 = acumulado del cuadro 1,OK,diferencia máxima 0.000000 MUSD
-Unidades de los cuadros por capítulo (total del cuadro / total oficial),OK,cociente entre 0.9884 y 1.0522
-Suma de los meses = acumulados oficiales del último informe (año en curso y anterior),OK,diferencia máxima 0.000000 MUSD
+Rubros y usos ene-09/2026: totales = acumulado del cuadro 1,OK,diferencia máxima 0.000000 MUSD
+Rubros y usos ene-09/2026: CyE y CyL = acumulados de las hojas c12 y c14,OK,diferencia máxima 0.000000 MUSD
+"Informe del corte, 2026: totales de las hojas de rubros y usos = cuadro 1",OK,diferencia máxima 0.000000 MUSD
+Rubros y usos ene-09/2025: totales = acumulado del cuadro 1,OK,diferencia máxima 0.000000 MUSD
+Rubros y usos ene-09/2025: CyE y CyL = acumulados de las hojas c12 y c14,OK,diferencia máxima 0.000000 MUSD
+"Informe del corte, 2025: totales de las hojas de rubros y usos = cuadro 1",OK,diferencia máxima 0.000000 MUSD
+Capítulo 27 (control): saldo = expo - impo en los cuadros,OK,diferencia máxima 0.000000 MUSD
+"Capítulo 27 (control): 0 <= capítulo 27 <= total, todos los meses",OK,exportaciones e importaciones
+12 meses derivado de oficiales = último punto de g2 (09/2026),OK,diferencia máxima 0.000000 MUSD
+"Saldo CyE - CyL publicado por terceros = primera publicación del INDEC (5.668, 7.815, 7.834)",OK,2024: 5667.8 vs 5668; 2025: 7815.1 vs 7815; 2026 ene-ago: 7834.5 vs 7834
+Capítulo 27 (control): unidades de los cuadros por capítulo (total del cuadro / total oficial),OK,cociente entre 0.9884 y 1.0522
+Capítulo 27 (control): suma de los meses = acumulados oficiales del último informe,OK,diferencia máxima 0.000000 MUSD

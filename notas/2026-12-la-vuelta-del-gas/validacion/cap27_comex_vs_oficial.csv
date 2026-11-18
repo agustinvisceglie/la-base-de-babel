@@ -6,4 +6,4 @@ periodo,meses_en_base,expo_comex_musd,expo_oficial_musd,impo_comex_musd,impo_ofi
 2022,12,6514.0,7044.7,12920.5,12920.5,"INDEC, exp_ncm_21_25.xls y imp_ncm_21_25.xls",-530.7,-7.5,-0.0
 2024,12,7834.7,8239.2,3777.8,3777.8,"INDEC, exp_ncm_21_25.xls y imp_ncm_21_25.xls",-404.5,-4.9,0.0
 2025,12,9261.1,9717.8,3042.5,3042.5,"INDEC, exp_ncm_21_25.xls y imp_ncm_21_25.xls",-456.7,-4.7,-0.0
-2026 ene-sep,9,10314.3,10786.9,2787.2,2787.2,Acumulado oficial (cifras_para_el_texto.csv),-472.6,-4.4,0.0
+2026 ene-sep,9,10314.3,10786.9,2787.2,2787.2,Acumulado oficial del informe del corte (validacion/comparacion_cye_cyl_vs_cap27.csv),-472.6,-4.4,0.0

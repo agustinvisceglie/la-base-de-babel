@@ -17,7 +17,7 @@ CARPETA_NOTA = Path(__file__).resolve().parent
 
 # Etapas en el orden en que se corren. Se agregan a medida que se terminan.
 ETAPAS = [
-    "1_ica.py",                 # saldo energético (capítulo 27) y saldo comercial de bienes (g1, g2)
+    "1_ica.py",                 # saldo energético (CyE - CyL) y saldo comercial de bienes (g1, g2)
     "control_comex.py",         # control: capítulo 27 en la base comex vs. cifras oficiales
 ]
 

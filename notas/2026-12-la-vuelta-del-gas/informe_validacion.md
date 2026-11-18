@@ -6,203 +6,178 @@ Nota de la sección **El Pozo y el Péndulo** (diciembre de 2026).
 
 | Etapa | Contenido | Estado |
 |---|---|---|
-| 1 | Saldo energético (capítulo 27 de la NCM) y saldo comercial de bienes: g1 y g2 | Completa. Última corrida: 17/11/2026 (datos hasta septiembre de 2026, informe ICA del 19/10/2026) |
+| 1 | Saldo energético (CyE − CyL) y saldo comercial de bienes: g1 y g2 | Completa. Última corrida: 18/11/2026 (corte en septiembre de 2026, informe ICA del 19/10/2026) |
 | 2 | Producción de petróleo y gas (Capítulo IV): g3 | Pendiente |
 | 3 | Índices de precios y cantidades: g4 | Pendiente |
 
-Los controles de cada corrida quedan en `validacion/` y se regeneran con `correr_todo.py`. Este informe resume la corrida indicada arriba. Todos los valores están en millones de USD corrientes.
+Los controles de cada corrida quedan en `validacion/` y se regeneran con `correr_todo.py`. Este informe resume la corrida indicada arriba. Todos los valores están en millones de USD corrientes, sin deflactar.
 
 ---
 
 ## Etapa 1. Saldo energético y saldo comercial de bienes
 
+### Definición
+
+- **Saldo energético** = exportaciones del gran rubro **Combustibles y energía (CyE)** − importaciones del uso económico **Combustibles y lubricantes (CyL)**, del Intercambio comercial argentino (ICA) del INDEC. Es la cifra que usan la Secretaría de Energía, IARAF, Economía & Energía y RICSA (criterio validado en el chat del proyecto; ver `criterios-metodologicos.md`).
+- Exportaciones FOB, importaciones CIF.
+- El saldo de referencia es el **saldo comercial de bienes** del ICA, no la cuenta corriente: no incluye servicios ni rentas.
+- **Período:** desde 2004, el comienzo de la serie mensual oficial por rubros y usos.
+- **Corte:** septiembre de 2026 (`MES_DE_CORTE` en `1_ica.py`). Si el INDEC publica un informe más nuevo, no se usa hasta cambiar el corte.
+- El capítulo 27 de la NCM queda solo como control (última sección de esta etapa).
+
 ### Cifras para citar en el texto
 
-Salen **solo de anuales y acumulados oficiales** (no de sumar meses). Archivo: `cifras_para_el_texto.csv`.
+Salen **solo de anuales y acumulados oficiales**, no de sumar meses. Archivo: `cifras_para_el_texto.csv`.
 
-| Período | Expo cap. 27 | Impo cap. 27 | Saldo cap. 27 | Saldo comercial de bienes | Peso del saldo cap. 27 |
+| Período | Expo CyE | Impo CyL | Saldo energético | Saldo comercial de bienes | Peso del saldo energético |
 |---|---:|---:|---:|---:|---:|
-| 2023 | 6.563,1 | 7.763,0 | −1.200,0 | −6.860,6 | 17,5% (1) |
-| 2024 | 8.239,2 | 3.777,8 | 4.461,4 | 18.927,6 | 23,6% |
-| 2025 | 9.717,8 | 3.042,5 | 6.675,3 | 11.320,1 | 59,0% |
-| Ene–sep 2025 | 7.074,7 | 2.571,5 | 4.503,2 | 6.046,2 | 74,5% |
-| Ene–sep 2026 | 10.786,9 | 2.787,2 | 7.999,6 | 21.198,3 | 37,7% |
-| 12 meses a sep-2026 (2) | 13.429,9 | 3.258,3 | 10.171,6 | 26.472,2 | 38,4% |
+| 2023 | 7.927,6 | 7.886,6 | 41,0 | −6.860,6 | no aplica (1) |
+| 2024 | 9.717,1 | 3.987,1 | 5.730,0 | 18.927,6 | 30,3% |
+| 2025 | 11.100,2 | 3.271,1 | 7.829,1 | 11.320,1 | 69,2% |
+| Ene–sep 2025 | 8.106,0 | 2.746,9 | 5.359,1 | 6.046,2 | 88,6% |
+| Ene–sep 2026 | 12.452,3 | 3.024,5 | 9.427,8 | 21.198,3 | 44,5% |
+| 12 meses a sep-2026 (2) | 15.446,5 | 3.548,7 | 11.897,7 | 26.472,2 | 44,9% |
 
-1. En 2023 los dos saldos son negativos: el déficit energético fue el 17,5% del déficit comercial de bienes. No se lee como "aporte" al saldo.
-2. Derivado solo de cifras oficiales: anual 2025 + acumulado ene–sep 2026 − acumulado ene–sep 2025.
+1. En 2023 los saldos tienen signos distintos: el energético es positivo (+41,0, dato vigente) y el de bienes, negativo. El cociente (−0,6%) no se lee como peso. Además, el signo del saldo energético de 2023 cambió con las revisiones del INDEC (ver "Historial de 2023").
+2. Derivado solo de cifras oficiales: anual 2025 + acumulado ene–sep 2026 − acumulado ene–sep 2025. Coincide exactamente (diferencia 0,0) con la suma de los últimos 12 meses de la serie mensual (último punto de g2).
 
-Fuentes: anuales, `exp_ncm_21_25.xls` e `imp_ncm_21_25.xls` (capítulo 27), y `exp_gr_80_25.xls` e `imp_uso_econ_80_25.xls` (saldo de bienes). Acumulados, informe ICA del 19/10/2026 (cuadro 8 para el capítulo 27 y cuadro 1 para el saldo de bienes). 2025 es dato provisorio y 2026, estimado.
+**Dato provisorio o estimado:** 2024 y 2025 son provisorios (marca * en los cuadros anuales). En el informe del 19/10/2026, las exportaciones de 2026 figuran como estimadas (2026e) y las importaciones como provisorias (2026*). Son marcas del INDEC; no hay valores estimados por nosotros.
 
-**Diferencia entre la suma de los meses y el acumulado oficial, ene–sep 2026: 0,0.** Con el método anterior, que tomaba cada mes tal como se publicó, era −125,6. Ahora los meses se derivan de los acumulados oficiales (punto 1 de "Cómo se arma cada serie"). El último punto de g2 (10.159,3) queda 12,3 por debajo de la cifra oficial de 12 meses (10.171,6). Es la revisión del anual 2025 posterior al informe de diciembre (6.662,9 → 6.675,3), que el INDEC no publica mes a mes. En el texto se cita la cifra oficial.
+**Origen de cada cifra:**
 
-**Origen de cada cifra anual del capítulo 27** (celdas de `datos/crudos/indec/`, archivos actualizados a junio de 2026):
-
-| Año | Exportaciones | Importaciones |
+| Período | Exportaciones (CyE y total) | Importaciones (CyL y total) |
 |---|---|---|
-| 2023 | `exp_ncm_21_25.xls`, hoja "Expo_2021-2025", celda D10 = 6.563,06 | `imp_ncm_21_25.xls`, hoja "Impo_2021-2025", celda D12 = 7.763,02 |
-| 2024 | Ídem, celda E10 | Ídem, celda E12 |
-| 2025 | Ídem, celda F10 | Ídem, celda F12 |
+| 2023 | [`exp_gr_80_25.xls`](https://www.indec.gob.ar/ftp/cuadros/economia/exp_gr_80_25.xls), hoja "grandes rubros": CyE en I52 (7.927.627,2 miles), total en I48 | [`imp_uso_econ_80_25.xls`](https://www.indec.gob.ar/ftp/cuadros/economia/imp_uso_econ_80_25.xls), hoja "Usos": CyL en I61 (7.886.633,6 miles), total en I58 |
+| 2024 | Ídem, J52 y J48 | Ídem, J61 y J58 |
+| 2025 | Ídem, B62 y B58 | Ídem, B74 y B71 |
+| Ene–sep 2025 y 2026 | [`ica_cuadros_19_10_26.xls`](https://www.indec.gob.ar/ftp/cuadros/economia/ica_cuadros_19_10_26.xls), hoja c12 (Cuadro 12), fila "Combustibles y energía (CyE)", columnas G (2026) y H (2025) | Ídem, hoja c14 (Cuadro 14), fila "Combustibles y lubricantes", columnas G y H |
+| Saldo de bienes, ene–sep | Ídem, cuadro 1 (hoja c1) | |
 
-La fila 10 (exportaciones) y la 12 (importaciones) son "Combustibles y aceites minerales y productos de su destilación; materias bituminosas; ceras minerales" (capítulo 27). Su contraste con los informes técnicos está en el control 5.
+Los cuadros anuales vienen en miles de USD y se pasan a millones.
 
-### Definición: capítulo 27 de la NCM
+### Contraste con las cifras publicadas
 
-"Energía" es el capítulo 27 de la Nomenclatura Común del Mercosur (combustibles minerales, aceites minerales y productos de su destilación; materias bituminosas; ceras minerales), con la misma definición para exportaciones e importaciones. Es el saldo energético que publica el INDEC en la sección 3.4 del informe técnico del ICA. Exportaciones FOB, importaciones CIF, dólares corrientes sin deflactar. El saldo analizado es el **saldo comercial de bienes** (ICA), no la cuenta corriente: no incluye servicios ni rentas.
+Los valores de referencia son los validados en el chat del proyecto (`criterios-metodologicos.md`). Para cada uno se buscó la **primera publicación del INDEC** de ese período: tiene que coincidir, salvo redondeo. La diferencia con el **dato vigente** son revisiones posteriores del INDEC. Archivo: `validacion/cye_cyl_vs_referencias_publicadas.csv`.
 
-Antes se usaba CyE − CyL (gran rubro de exportación contra uso económico de importación). Se descartó porque mezcla dos clasificaciones distintas y da un saldo más alto: en ene–sep 2026, 9.427,8 contra 7.999,6 (+17,9%). La comparación completa está más abajo.
+| Período | Referencia publicada | Publicada por | Primera publicación del INDEC | Dato vigente | Vigente − primera publicación | Expo CyE | Impo CyL |
+|---|---:|---|---|---:|---:|---:|---:|
+| 2024 | 5.668 | Secretaría de Energía | 5.667,8 (informe ICA del 20/01/2025, cuadros 4 y 6) | 5.730,0 | +62,2 | +40,5 | −21,7 |
+| 2025 | 7.815 | IARAF (N. Argañaraz) | 7.815,1 (informe ICA del 20/01/2026, cuadros 12 y 14) | 7.829,1 | +14,0 | +14,0 | 0,0 |
+| Ene–ago 2026 | 7.834 | Economía & Energía (N. Arceo) y RICSA | 7.834,5 (informe ICA del 18/09/2026, cuadros 12 y 14) | 7.827,9 (1) | −6,6 | +4,0 | +10,6 |
+
+1. Suma de enero a agosto de la serie mensual del informe del corte. Es un control: no se cita.
+
+- **Las tres referencias coinciden con la primera publicación del INDEC** (diferencias de −0,2, +0,1 y +0,5, por redondeo).
+- **2024:** el INDEC revisó el año en el informe del 20/01/2026, que ya trae 5.730,0. Es el valor vigente.
+- **2025:** el anual vigente (`exp_gr_80_25.xls`) supera en 14,0 a lo publicado en enero de 2026, todo por exportaciones. Es el caso que menciona `criterios-metodologicos.md` (7.815 contra 7.829). La versión revisada un año después sale en enero de 2027.
+- Los informes usados son [`ica_cuadros_20_01_25.xls`](https://www.indec.gob.ar/ftp/cuadros/economia/ica_cuadros_20_01_25.xls), [`ica_cuadros_20_01_26.xls`](https://www.indec.gob.ar/ftp/cuadros/economia/ica_cuadros_20_01_26.xls) y [`ica_cuadros_18_09_26.xls`](https://www.indec.gob.ar/ftp/cuadros/economia/ica_cuadros_18_09_26.xls).
+
+### Historial de 2023 (cambio de signo)
+
+Archivo: `validacion/cye_cyl_anual_vs_informes.csv`.
+
+| Versión | Fuente | Expo CyE | Impo CyL | Saldo |
+|---|---|---:|---:|---:|
+| Primera publicación | Informe ICA del 18/01/2024 ([`ica_cuadros_18_01_24.xls`](https://www.indec.gob.ar/ftp/cuadros/economia/ica_cuadros_18_01_24.xls), cuadros 3 y 5; valores redondeados a millones) | 7.878,0 | 7.924,0 | −46,0 |
+| Revisada un año después | Informe ICA del 20/01/2025 (cuadros 4 y 6) | 7.910,7 | 7.924,0 | −13,4 |
+| Vigente | `exp_gr_80_25.xls` e `imp_uso_econ_80_25.xls` | 7.927,6 | 7.886,6 | +41,0 |
+
+Las dos primeras versiones dan un déficit chico; la vigente, un superávit chico. En cualquiera de las tres el saldo energético de 2023 está cerca del equilibrio (entre −46 y +41). Con el capítulo 27, en cambio, 2023 es un déficit de −1.200,0.
 
 ### Fuentes
 
 | Serie | Archivo o ID | Organismo | Frecuencia | Uso |
 |---|---|---|---|---|
-| Capítulo 27, expo e impo, mes del informe y mismo mes del año anterior; acumulados | Excel de cuadros de cada informe técnico del ICA (`ica_cuadros_DD_MM_AA.xls`, hoja del capítulo 27: `c8`, o `c7` en enero). 20 informes, del 19/03/2025 al 19/10/2026; lista con URL en `validacion/informes_ica_usados.csv` | INDEC | Mensual | Serie mensual desde 01/2024 y acumulados oficiales |
+| Exportaciones por grandes rubros e importaciones por usos económicos, mensual desde 2004 | [`serie_rubros_usos_mensual.xlsx`](https://www.indec.gob.ar/ftp/ica_digital/ica_d_10_263F42E3F39F/data/cuadros/serie_rubros_usos_mensual.xlsx), de la versión interactiva del informe del 19/10/2026 (viene en USD y se pasa a millones) | INDEC | Mensual | Serie mensual de CyE, CyL y totales (g2) |
+| Exportaciones por rubro e importaciones por uso, anual | `exp_gr_80_25.xls`, `imp_uso_econ_80_25.xls` (miles de USD) | INDEC | Anual | Anuales de CyE, CyL y saldo de bienes (g1 y cifras para citar) |
+| Excel de cuadros de cada informe técnico del ICA | `ica_cuadros_DD_MM_AA.xls`; lista con URL en `validacion/informes_ica_usados.csv` | INDEC | Mensual | Acumulados oficiales (informe del corte) y primeras publicaciones (informes de enero y de agosto de 2026) |
+| PDF del informe técnico del ICA de septiembre de 2026 | [`ica_10_263F42E3F39F.pdf`](https://www.indec.gob.ar/uploads/informesdeprensa/ica_10_263F42E3F39F.pdf) | INDEC | — | Contraste de lo leído con lo publicado (control 1) |
 | Listado de informes técnicos del ICA | [www.indec.gob.ar/Institucional/Indec/InformesTecnicos/40](https://www.indec.gob.ar/Institucional/Indec/InformesTecnicos/40) | INDEC | — | Encontrar cada informe y su Excel de cuadros |
-| Capítulo 27, expo e impo | API de Series de Tiempo `162.3_XMB_MINION_0_0_56` y `163.3_MMBUSTIION_0_0_59` | INDEC (publica: Subsecretaría de Programación Macroeconómica) | Mensual, 01/1990–02/2025 | Serie mensual 01/2005–12/2023 y anuales 2006–2009 |
-| Capítulo 27, anual | `exp_ncm_AA_AA.xls` e `imp_ncm_AA_AA.xls`, quinquenios del 2010–2014 al 2021–2025 | INDEC | Anual | Anuales 2010–2025 |
-| Exportaciones por rubro e importaciones por uso, totales | `exp_gr_80_25.xls`, `imp_uso_econ_80_25.xls` (vienen en miles de USD y se pasan a millones) | INDEC | Anual | Saldo comercial de bienes anual; CyE y CyL anual |
-| Exportaciones por rubro e importaciones por uso, mensual desde 2004 | `serie_rubros_usos_mensual.xlsx` de la [versión interactiva del informe](https://www.indec.gob.ar/ftp/ica_digital/ica_d_10_263F42E3F39F/) (viene en USD y se pasa a millones) | INDEC | Mensual | Saldo comercial de bienes mensual (g2); CyE y CyL para la comparación |
-| Cuadro 1 del informe (acumulado del año) | Excel de cuadros del último informe | INDEC | Acumulado | Saldo comercial de bienes acumulado |
-| Base de comercio exterior por posición NCM | `exports_AAAA_M.zip`, `imports_AAAA_M.zip` en [comex.indec.gob.ar](https://comex.indec.gob.ar/) | INDEC | Mensual | Solo control (ver más abajo) |
 
-Fecha de descarga de todo: **17/11/2026**. La URL, la hora, el tamaño y el hash SHA-256 de cada archivo están en `validacion/descargas.csv` y `validacion/descargas_comex.csv`.
+Fecha de descarga de todo: **18/11/2026**. Los archivos son idénticos a los de la corrida del 17/11/2026: tienen el mismo hash SHA-256. La URL, la hora, el tamaño y el hash de cada archivo están en `validacion/descargas.csv` y `validacion/descargas_comex.csv`.
 
 ### Cómo se arma cada serie
 
-1. **Capítulo 27 mensual: derivado de los acumulados oficiales más recientes.** Cada informe técnico publica, con una misma revisión, el acumulado de enero al mes m y el valor del mes m, para el año en curso y para el anterior. De cada informe salen dos acumulados oficiales:
-   - acumulado hasta m = el acumulado del informe;
-   - acumulado hasta m − 1 = el acumulado del informe menos el mes m del informe.
-
-   Por ejemplo, el informe de febrero da ene–feb y, restando febrero, enero revisado. Para cada año y mes se toma el acumulado del informe publicado más recientemente, sea del año en curso o de la columna del año anterior. **Cada mes es la diferencia entre acumulados consecutivos:** mes(m) = acum(m) − acum(m − 1). Así, la suma de los meses de enero a m es exactamente el acumulado oficial más reciente hasta m. Es aritmética sobre cifras publicadas, no una estimación.
-   - **Actualización:** cuando sale un informe nuevo, sus acumulados reemplazan solos a los más viejos (también los del año anterior).
-   - **Cobertura:** los informes cubren 01/2024–09/2026 (33 meses); los meses anteriores, 01/2005–12/2023 (228 meses), salen de la API.
-   - **Trazabilidad:** la columna `fuente` de `datos/procesados/ica_cap27_mensual.csv` dice de qué informes y acumulados sale cada mes.
-2. **No hay valores estimados.** Todos los valores salen de cifras publicadas por el INDEC, así que no se agregó columna de estimación ni nota al pie. La regla del `CLAUDE.md` sobre estimaciones no se aplica en esta etapa.
-3. **Advertencia sobre los meses sueltos.** Cuando entre dos informes consecutivos el INDEC corrige meses anteriores, esa corrección queda imputada en el último mes de la ventana. Ejemplo: el informe de junio 2026 bajó ene–abr, y mayo derivado queda 78,3 por debajo de mayo publicado. Las sumas desde enero coinciden exactamente con el acumulado oficial más reciente. Los acumulados de 12 meses también, salvo por la revisión anual de 2025 (−12,3). Un mes aislado no es necesariamente el "mes publicado". La comparación mes a mes está en `validacion/cap27_mes_publicado_vs_derivado.csv`: de 32 meses, 9 difieren en más de 1 millón.
-4. **Capítulo 27 anual:** para cada año se toma el cuadro anual por capítulo más reciente que lo trae (por ejemplo, 2023 de `21_25` y no de `19_23`). Para 2006–2009 no hay cuadro anual por capítulo publicado, así que se usa la suma de los 12 meses de la API. Antes de 2018 la base de comercio exterior no tenía secreto estadístico y la API coincide exactamente con ella (en 2006, 7.110,6 en las dos).
-5. **2025: se usa el anual revisado, 6.675,3** (`exp_ncm_21_25.xls` e `imp_ncm_21_25.xls`: 9.717,8 − 3.042,5). El informe de enero de 2026 (datos de diciembre de 2025, publicado el 20/01/2026) informó un acumulado ene–dic 2025 de **6.663** (6.662,9 en su Excel de cuadros); el INDEC lo revisó después en +12,4.
-6. **Saldo comercial de bienes mensual:** sale de `serie_rubros_usos_mensual.xlsx` (suma de todos los rubros y de todos los usos, incluido "Resto"). Reemplaza a la API usada en la versión anterior de esta etapa. Esta serie coincide con los anuales oficiales en todos los años 2004–2025 (diferencia máxima: 0,002) y con el acumulado del cuadro 1. La API, en cambio, no tenía las revisiones de 2014–2016 y 2022–2023.
-7. **g1:** años 2006–2025 con los anuales oficiales; ene–sep 2025 y ene–sep 2026 con los acumulados del último informe. El acumulado del año en curso solo se compara con el mismo período del año anterior.
-8. **g2:** suma móvil de 12 meses de las series mensuales, desde enero de 2006 (por eso se bajan datos desde 2005).
-9. **Datos provisorios:** 2024 y 2025 son provisorios y 2026 es estimado. Las exportaciones de gas por gasoducto de los últimos meses son estimaciones del INDEC hasta que llega el dato final (nota 1 del cuadro 8).
-
-### Por qué esta es la fuente principal
-
-**a) Contra CyE − CyL.** El saldo CyE − CyL supera al del capítulo 27 todos los años, entre 390 y 1.604 millones. La diferencia viene sobre todo de exportaciones: CyE supera a las exportaciones del capítulo 27 en entre 602 y 2.004 millones por año. Archivo: `validacion/comparacion_cye_cyl_vs_cap27.csv`. CyE y CyL salen de `serie_rubros_usos_mensual.xlsx` y de los anuales oficiales por rubro y uso.
-
-| Período | Saldo CyE − CyL | Saldo cap. 27 | Diferencia saldo | Diferencia expo (CyE − cap. 27) | Diferencia impo (CyL − cap. 27) |
-|---|---:|---:|---:|---:|---:|
-| 2006 | 6.080,8 | 5.506,3 | 574,6 | 702,4 | 127,9 |
-| 2007 | 4.104,3 | 3.419,5 | 684,7 | 837,6 | 152,9 |
-| 2008 | 3.514,5 | 2.428,3 | 1.086,2 | 1.286,3 | 200,1 |
-| 2009 | 3.830,4 | 3.223,2 | 607,2 | 797,0 | 189,8 |
-| 2010 | 1.759,9 | 909,0 | 850,9 | 1.137,2 | 286,2 |
-| 2011 | −3.114,5 | −4.446,0 | 1.331,5 | 1.725,7 | 394,2 |
-| 2012 | −2.150,3 | −3.754,0 | 1.603,7 | 1.996,0 | 392,3 |
-| 2013 | −6.902,5 | −8.459,0 | 1.556,5 | 2.003,6 | 447,1 |
-| 2014 | −6.400,6 | −7.679,0 | 1.278,4 | 1.741,6 | 463,2 |
-| 2015 | −4.608,4 | −5.140,0 | 531,6 | 803,6 | 272,1 |
-| 2016 | −2.807,6 | −3.198,0 | 390,4 | 602,0 | 211,7 |
-| 2017 | −3.244,2 | −3.812,0 | 567,8 | 811,5 | 243,7 |
-| 2018 | −2.354,3 | −3.126,0 | 771,7 | 1.030,2 | 258,5 |
-| 2019 | −24,7 | −1.003,0 | 978,3 | 1.234,6 | 256,2 |
-| 2020 | 952,9 | 146,0 | 806,8 | 881,0 | 74,2 |
-| 2021 | −559,6 | −1.354,3 | 794,7 | 835,0 | 40,3 |
-| 2022 | −4.386,4 | −5.875,8 | 1.489,3 | 1.544,3 | 54,9 |
-| 2023 | 41,0 | −1.200,0 | 1.240,9 | 1.364,5 | 123,6 |
-| 2024 | 5.730,0 | 4.461,4 | 1.268,6 | 1.477,9 | 209,3 |
-| 2025 | 7.829,1 | 6.675,3 | 1.153,8 | 1.382,4 | 228,6 |
-| Ene–sep 2025 | 5.359,1 | 4.503,2 | 855,9 | 1.031,3 | 175,4 |
-| Ene–sep 2026 | 9.427,8 | 7.999,6 | 1.428,2 | 1.665,4 | 237,3 |
-
-El caso que más cambia la lectura es 2023: con CyE − CyL el saldo energético está en equilibrio (+41); con el capítulo 27, en déficit (−1.200).
-
-**b) Contra la base de comercio exterior (comex).** La base de microdatos del INDEC permite sumar el capítulo 27 mes a mes, pero desde 2018 el secreto estadístico tapa parte de las exportaciones. Las posiciones con pocos operadores, como la energía eléctrica, van al código "Confidencial". Las importaciones no tienen ese problema. Archivo: `validacion/cap27_comex_vs_oficial.csv` (lo genera `control_comex.py`).
-
-| Período | Expo comex | Expo oficial | Diferencia | Impo comex | Impo oficial |
-|---|---:|---:|---:|---:|---:|
-| 2006 (1) | 7.110,6 | 7.110,6 | 0,0% | 1.604,3 | 1.604,3 |
-| 2015 | 1.442,0 | 1.442,0 | 0,0% | 6.581,6 | 6.582,0 |
-| 2018 | 2.454,0 | 3.171,0 | −22,6% | 6.297,3 | 6.297,0 |
-| 2020 | 2.107,8 | 2.712,2 | −22,3% | 2.566,1 | 2.566,1 |
-| 2022 | 6.514,0 | 7.044,7 | −7,5% | 12.920,5 | 12.920,5 |
-| 2024 | 7.834,7 | 8.239,2 | −4,9% | 3.777,8 | 3.777,8 |
-| 2025 | 9.261,1 | 9.717,8 | −4,7% | 3.042,5 | 3.042,5 |
-| Ene–sep 2026 | 10.314,3 | 10.786,9 | −4,4% | 2.787,2 | 2.787,2 |
-
-(1) En 2006 la referencia es la suma de la API (no hay cuadro anual por capítulo).
-
-**c) Contra la API sola.** La API trae el total completo del capítulo 27, pero dejó de actualizarse en febrero de 2025. En los 14 meses en que coincide con los informes (01/2024–02/2025), las diferencias son de revisión: como máximo 20,4 en exportaciones y 11,8 en importaciones (`validacion/cap27_api_vs_informes.csv`).
-
-**d) La versión interactiva del informe no tiene la serie del capítulo 27.** La nota "serie original desde 1986, desestacionalizada y tendencia-ciclo desde 1996, con descarga en xlsx" (p. 4 de los informes) se refiere a las exportaciones, importaciones y saldo totales. Revisé las cinco páginas del sitio interactivo y los archivos que cargan sus gráficos: no hay ninguno del capítulo 27.
+1. **Mensual:** `serie_rubros_usos_mensual.xlsx` viene en formato largo (año, mes, flujo, rubro o uso, valor en USD).
+   - CyE es el rubro "Combustibles y energía" y CyL, el uso "Combustibles y lubricantes".
+   - Los totales son la suma de todos los rubros o usos, incluido "Resto".
+   - **No se derivan ni se estiman meses.**
+2. **Anual:** cuadros anuales por rubro y uso. La suma de los 12 meses de la serie mensual coincide con ellos en todos los años 2004–2025: la diferencia máxima es 0,002.
+3. **g1:** años 2004–2025 con los anuales oficiales, más ene–sep 2025 y ene–sep 2026 con los acumulados del informe del corte. El acumulado del año en curso solo se compara con el mismo período del año anterior.
+4. **g2:** suma móvil de 12 meses de la serie mensual. El primer punto es diciembre de 2004, porque la serie empieza en enero de 2004.
+5. **12 meses a septiembre de 2026:** sale de cifras oficiales (anual 2025 + ene–sep 2026 − ene–sep 2025) y coincide exactamente con el último punto de g2.
 
 ### Controles
 
-**Control 1. Lo que leemos de los Excel de cuadros vs. lo publicado en los informes** (`validacion/control_valores_publicados.csv`). Los informes redondean a millones enteros; la tolerancia es 1.
+**Control 1. Lo que leemos de los Excel de cuadros vs. lo publicado en el PDF del informe del 19/10/2026** (`validacion/control_valores_publicados.csv`). Los informes redondean a millones enteros; la tolerancia es 1.
 
 | Dato | Leído | Publicado | Diferencia | Estado | Dónde |
 |---|---:|---:|---:|---|---|
-| Saldo cap. 27, acum. ene–dic 2025 (versión de enero 2026) | 6.662,94 | 6.663 | −0,06 | OK | Informe del 20/01/2026 |
-| Saldo cap. 27, acum. ene–ago 2026 | 6.576,25 | 6.576 | 0,25 | OK | Informe del 18/09/2026, p. 28, cuadro 8 |
-| Exportación cap. 27, sep-2026 | 1.586,24 | 1.586 | 0,24 | OK | Informe del 19/10/2026, p. 28, cuadro 8 |
-| Importación cap. 27, sep-2026 | 145,72 | 146 | −0,28 | OK | Ídem |
-| Saldo cap. 27, sep-2026 | 1.440,51 | 1.441 | −0,49 | OK | Ídem |
-| Saldo cap. 27, sep-2025 (revisado) | 691,60 | 692 | −0,40 | OK | Ídem |
-| Exportación cap. 27, acum. ene–sep 2026 | 10.786,87 | 10.787 | −0,13 | OK | Ídem |
-| Importación cap. 27, acum. ene–sep 2026 | 2.787,25 | 2.787 | 0,25 | OK | Ídem |
-| Saldo cap. 27, acum. ene–sep 2026 | 7.999,62 | 8.000 | −0,38 | OK | Ídem |
-| Saldo cap. 27, acum. ene–sep 2025 (revisado) | 4.503,25 | 4.503 | 0,25 | OK | Ídem |
-| Exportaciones totales, acum. ene–sep 2026 | 77.267,05 | 77.267 | 0,05 | OK | Informe del 19/10/2026, p. 7, cuadro 1 |
-| Importaciones totales, acum. ene–sep 2026 | 56.068,79 | 56.069 | −0,21 | OK | Ídem |
-| Saldo comercial de bienes, acum. ene–sep 2026 | 21.198,25 | 21.198 | 0,25 | OK | Ídem |
-| Saldo comercial de bienes, acum. ene–sep 2025 | 6.046,17 | 6.046 | 0,17 | OK | Ídem |
+| Exportación CyE, sep-2026 | 1.781,38 | 1.781 | 0,38 | OK | p. 9 (texto: "USD 1.781 millones") |
+| Exportación CyE, acum. ene–sep 2026 | 12.452,34 | 12.452 | 0,34 | OK | p. 6 (gráfico de grandes rubros y usos económicos, acumulado) |
+| Importación CyL, acum. ene–sep 2026 | 3.024,54 | 3.025 | −0,46 | OK | p. 6 |
+| Exportaciones totales, acum. ene–sep 2026 | 77.267,05 | 77.267 | 0,05 | OK | p. 7, cuadro 1 |
+| Importaciones totales, acum. ene–sep 2026 | 56.068,79 | 56.069 | −0,21 | OK | p. 7, cuadro 1 |
+| Saldo comercial de bienes, acum. ene–sep 2026 | 21.198,25 | 21.198 | 0,25 | OK | p. 7, cuadro 1 |
+| Saldo comercial de bienes, acum. ene–sep 2025 | 6.046,17 | 6.046 | 0,17 | OK | p. 7, cuadro 1 |
+
+El PDF se leyó por texto (con `pypdf`, fuera del repositorio). El archivo también tiene 10 controles del capítulo 27, todos OK.
 
 **Control 2. Controles internos** (`validacion/controles.csv`). Todos dan OK:
-- Las series mensuales del capítulo 27 (01/2005–09/2026) y de rubros y usos (01/2004–09/2026) no tienen meses faltantes.
-- En los 40 cuadros leídos (mes actual y mes del año anterior de 20 informes), el saldo es igual a expo − impo.
-- Todos los meses cumplen 0 ≤ capítulo 27 ≤ total, en exportaciones y en importaciones.
-- La serie de rubros y usos coincide con los anuales oficiales (2004–2025) y con el acumulado del cuadro 1 (ene–sep 2025 y 2026).
-- La suma de los meses del capítulo 27 coincide con los acumulados oficiales del último informe: ene–sep 2026 y ene–sep 2025 (diferencia 0).
+- La serie mensual va de enero de 2004 a septiembre de 2026, sin meses faltantes.
+- Todos los meses cumplen 0 ≤ CyE ≤ exportaciones totales y 0 ≤ CyL ≤ importaciones totales.
+- La serie mensual coincide con los anuales oficiales (2004–2025) y con los acumulados del informe del corte (ene–sep 2025 y 2026): totales contra el cuadro 1 y CyE y CyL contra los cuadros 12 y 14. Las diferencias son de 0,000.
+- En el informe del corte, los totales de los cuadros 12 y 14 coinciden con el cuadro 1.
+- El acumulado de 12 meses derivado de oficiales coincide con el último punto de g2.
+- Las tres referencias publicadas coinciden con la primera publicación del INDEC.
 
-**Control 3. Unidades** (`validacion/control_unidades_cuadros_capitulos.csv`). Uno de los cuadros por capítulo (`exp_ncm_18_22.xls`) no declara la unidad. Por eso, para cada cuadro y año, el total del cuadro se divide por el total anual oficial en millones. Los cocientes van de 0,988 a 1,052: todos están en millones, y las diferencias son revisiones. La mayor, el 2014 estimado del cuadro 2010–2014, no se usa.
+**Control 3. Anual vigente vs. informes de diciembre** (`validacion/cye_cyl_anual_vs_informes.csv`). Diferencias de vigente menos informe:
 
-**Control 4. Suma de los meses vs. anuales y acumulados oficiales** (`validacion/cap27_suma_meses_vs_oficial.csv`).
+| Año | Versión | Informe | Saldo del informe | Saldo vigente | Dif. expo CyE | Dif. impo CyL | Dif. saldo |
+|---|---|---|---:|---:|---:|---:|---:|
+| 2023 | Primera publicación | 18/01/2024 | −46,0 | 41,0 | 49,6 | −37,4 | 87,0 |
+| 2023 | Revisada | 20/01/2025 | −13,4 | 41,0 | 17,0 | −37,4 | 54,4 |
+| 2024 | Primera publicación | 20/01/2025 | 5.667,8 | 5.730,0 | 40,5 | −21,7 | 62,2 |
+| 2024 | Revisada | 20/01/2026 | 5.730,0 | 5.730,0 | 0,0 | 0,0 | 0,0 |
+| 2025 | Primera publicación | 20/01/2026 | 7.815,1 | 7.829,1 | 14,0 | 0,0 | 14,0 |
+| 2025 | Revisada | Se publica en enero de 2027 | | | | | |
 
-Acumulados de 2026 que publicó cada informe contra la suma de los meses de la serie, que hoy tienen la revisión más reciente (saldo). La diferencia es cuánto revisó el INDEC ese acumulado en informes posteriores; en el último informe es cero por construcción.
+### Control: capítulo 27 de la NCM
 
-| Acumulado | Informe | Suma de meses | Publicado en ese informe | Diferencia |
-|---|---|---:|---:|---:|
-| Ene 2026 | 19/02/2026 | 656,9 | 504,7 | 152,2 |
-| Ene–feb 2026 | 19/03/2026 | 1.063,4 | 1.035,9 | 27,5 |
-| Ene–mar 2026 | 20/04/2026 | 2.033,1 | 2.008,7 | 24,4 |
-| Ene–abr 2026 | 20/05/2026 | 3.290,8 | 3.281,2 | 9,7 |
-| Ene–may 2026 | 18/06/2026 | 4.607,9 | 4.686,3 | −78,3 |
-| Ene–jun 2026 | 20/07/2026 | 5.083,7 | 5.076,2 | 7,5 |
-| Ene–jul 2026 | 20/08/2026 | 5.805,6 | 5.805,8 | −0,1 |
-| Ene–ago 2026 | 18/09/2026 | 6.559,1 | 6.576,2 | −17,1 |
-| Ene–sep 2026 | 19/10/2026 | 7.999,6 | 7.999,6 | 0,0 |
+**Nota metodológica.** El capítulo 27 de la Nomenclatura Común del Mercosur ("Combustibles minerales, aceites minerales y productos de su destilación; materias bituminosas; ceras minerales") es la apertura por producto que el INDEC publica en el cuadro 8 del informe técnico del ICA. No es la cifra de "balanza energética" que usan la Secretaría de Energía ni las consultoras, y no coincide con ninguna cifra publicada con ese nombre. Difiere de CyE − CyL porque son clasificaciones distintas: CyE es un gran rubro de exportación y CyL, un uso económico de importación. El saldo CyE − CyL supera al del capítulo 27 todos los años, entre 252,9 (2004) y 1.603,7 (2012), sobre todo por exportaciones. No se analizó qué productos explican la diferencia.
 
-La revisión más grande fue la de enero de 2026: el informe de febrero lo subió en 152,2 millones, casi todo por exportaciones. Con el método anterior, que tomaba los meses tal como se publicaron, esa revisión quedaba afuera y la suma ene–sep 2026 daba 7.874,0 (−125,6). Ahora entra por el acumulado ene–feb.
+Archivo completo, 2004 a ene–sep 2026: `validacion/comparacion_cye_cyl_vs_cap27.csv`. Años seleccionados:
 
-Años completos: la suma de los meses difiere del anual oficial en menos de 60 millones por año: 2016 (−56,0), 2021 (−53,2), 2019 (−29,8), 2018 (+26,0), 2023 (−17,7), 2022 (+16,1), 2025 (−12,3) y 2017 (−1,7); 2024 coincide (0,0). Hasta 2023 son revisiones del INDEC que la API no incorpora. En 2025 es la revisión del anual posterior al informe de diciembre (control 5).
+| Período | Saldo CyE − CyL | Saldo cap. 27 | Diferencia | Dif. expo (CyE − cap. 27) | Dif. impo (CyL − cap. 27) |
+|---|---:|---:|---:|---:|---:|
+| 2004 | 5.177,7 | 4.924,8 | 252,9 | 334,4 | 81,6 |
+| 2013 | −6.902,5 | −8.459,0 | 1.556,5 | 2.003,6 | 447,1 |
+| 2019 | −24,7 | −1.003,0 | 978,3 | 1.234,6 | 256,2 |
+| 2022 | −4.386,4 | −5.875,8 | 1.489,3 | 1.544,3 | 54,9 |
+| 2023 | 41,0 | −1.200,0 | 1.240,9 | 1.364,6 | 123,6 |
+| 2024 | 5.730,0 | 4.461,4 | 1.268,6 | 1.477,9 | 209,2 |
+| 2025 | 7.829,1 | 6.675,3 | 1.153,8 | 1.382,4 | 228,6 |
+| Ene–sep 2025 | 5.359,1 | 4.503,2 | 855,9 | 1.031,3 | 175,4 |
+| Ene–sep 2026 | 9.427,8 | 7.999,6 | 1.428,2 | 1.665,5 | 237,3 |
 
-**Control 5. Anual oficial del capítulo 27 vs. informes de diciembre** (`validacion/cap27_anual_vs_informes.csv`). Para cada año se contrasta el anual oficial con lo publicado en el informe de diciembre de ese año (primera publicación) y en el de diciembre del año siguiente (columna del año anterior, revisada). Las diferencias son anual oficial menos informe.
+**Cómo se arma el capítulo 27 (solo para este control).** Anual: cuadros anuales por capítulo (`exp_ncm_AA_AA.xls`, `imp_ncm_AA_AA.xls`, del 2010–2014 al 2021–2025; para cada año, el cuadro más reciente). Para 2004–2009 no hay cuadro anual por capítulo y se usa la suma de los 12 meses de la API de Series de Tiempo (`162.3_XMB_MINION_0_0_56` y `163.3_MMBUSTIION_0_0_59`). Acumulados: cuadro 8 del informe del corte. Además, `datos/procesados/ica_cap27_mensual.csv` guarda una serie mensual desde 2004: la API hasta 12/2023 y, desde 01/2024, meses derivados de los acumulados oficiales de los 20 informes técnicos del 19/03/2025 al 19/10/2026. El método está en la docstring de `armar_cap27_mensual()` en `1_ica.py`.
 
-| Año | Versión | Informe | Expo | Impo | Saldo | Dif. expo | Dif. impo | Dif. saldo |
-|---|---|---|---:|---:|---:|---:|---:|---:|
-| 2023 | Primera publicación | 18/01/2024 | — | — | — | — | — | — |
-| 2023 | Revisada | 20/01/2025 (cuadro 33) | 6.545,4 | 7.763,1 | −1.217,7 | 17,7 | 0,0 | 17,7 |
-| 2024 | Primera publicación | 20/01/2025 (cuadro 33) | 8.203,2 | 3.788,8 | 4.414,4 | 36,0 | −10,9 | 47,0 |
-| 2024 | Revisada | 20/01/2026 | 8.239,2 | 3.777,8 | 4.461,4 | 0,0 | 0,0 | 0,0 |
-| 2025 | Primera publicación | 20/01/2026 | 9.705,4 | 3.042,5 | 6.662,9 | 12,3 | 0,0 | 12,3 |
-| 2025 | Revisada | Se publica en enero de 2027 | | | | | | |
-
-- **2023:** el informe de diciembre de 2023 todavía no traía el cuadro del capítulo 27. La primera publicación disponible es la columna "2023*" del informe del 20/01/2025: −1.217,7. El anual oficial actual (−1.200,0) es 17,7 mayor, todo por exportaciones, por una revisión posterior.
-- **Historial de las exportaciones de 2023:** el cuadro 2019–2023 daba 6.545; el informe de enero de 2025, 6.545,4; el cuadro 2020–2024, 6.643,3; y el cuadro 2021–2025 (junio de 2026), 6.563,1. La nota usa el más reciente. Conviene citar 2023 como "alrededor de −1.200 millones" o aclarar que es el dato revisado a junio de 2026.
-- **2024:** la versión revisada coincide exactamente con el anual oficial.
-- **2025:** el anual revisado (6.675,3) supera en 12,3 a lo publicado en enero de 2026 (6.663). Se usa el revisado.
+**Resultados de los controles del capítulo 27** (todos en `validacion/`):
+- `cap27_suma_meses_vs_oficial.csv`: la suma de los meses coincide con los acumulados del informe del corte (diferencia 0,0).
+- `cap27_anual_vs_informes.csv`: el anual vigente difiere de la primera publicación en +47,0 (2024) y +12,3 (2025) por revisiones del INDEC.
+- `cap27_api_vs_informes.csv`: en los 14 meses en que la API y los informes coinciden (01/2024–02/2025), las diferencias son de revisión: como máximo 20,4 en exportaciones y 11,8 en importaciones.
+- `cap27_mes_publicado_vs_derivado.csv`: compara cada mes derivado con el mes tal como se publicó.
+- `cap27_comex_vs_oficial.csv` (lo genera `control_comex.py`): desde 2018 el secreto estadístico tapa parte de las exportaciones del capítulo 27 en la base comex, entre el 4,4% y el 22,6% en los años de muestra (2018, 2020, 2022, 2024, 2025 y ene–sep 2026). En 2006 y 2015 la base coincide con el dato oficial. Por eso esa base no sirve como fuente.
+- `control_unidades_cuadros_capitulos.csv`: todos los cuadros por capítulo están en millones de USD (cociente contra el total oficial entre 0,988 y 1,052).
 
 ### Lectura rápida de los resultados (para chequear que tengan sentido, no para publicar)
 
-- Saldo del capítulo 27: superávit entre 2006 y 2010; déficit entre 2011 y 2019, con un máximo de −8.459 en 2013; casi equilibrio en 2020 (+146); déficit en 2021 (−1.354), 2022 (−5.876) y 2023 (−1.200); superávit de 4.461 en 2024, 6.675 en 2025 y 7.999,6 en ene–sep 2026 (contra 4.503 en ene–sep 2025).
-- Últimos 12 meses a septiembre de 2026 (cifra oficial derivada): saldo energético de 10.171,6, el 38,4% del saldo comercial de bienes (26.472,2).
+- **Saldo energético CyE − CyL:**
+  - superávit entre 2004 y 2010, con un máximo de 6.080,8 en 2006;
+  - déficit entre 2011 y 2019, con un mínimo de −6.902,5 en 2013;
+  - superávit en 2020 (+952,9);
+  - déficit en 2021 (−559,6) y en 2022 (−4.386,4);
+  - casi equilibrio en 2023 (+41,0);
+  - superávit de 5.730,0 en 2024 y de 7.829,1 en 2025.
+- **Ene–sep 2026:** 9.427,8, contra 5.359,1 en ene–sep 2025 (+75,9%).
+- **Últimos 12 meses a septiembre de 2026:** saldo energético de 11.897,7, el 44,9% del saldo comercial de bienes (26.472,2).

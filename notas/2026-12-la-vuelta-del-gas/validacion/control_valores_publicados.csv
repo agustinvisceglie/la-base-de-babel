@@ -1,4 +1,11 @@
 dato,valor_leido,valor_publicado,diferencia,estado,donde
+"Exportación CyE, sep-2026",1781.38,1781,0.38,OK,"Informe ICA de septiembre 2026 (19/10/2026), p. 9 (texto: 'USD 1.781 millones')"
+"Exportación CyE, acum. ene-sep 2026",12452.34,12452,0.34,OK,"Ídem, p. 6 (gráfico 'Exportaciones por grandes rubros e importaciones por usos económicos', acumulado)"
+"Importación CyL, acum. ene-sep 2026",3024.54,3025,-0.46,OK,"Ídem, p. 6"
+"Exportaciones totales, acum. ene-sep 2026",77267.05,77267,0.05,OK,"Informe ICA de septiembre 2026 (19/10/2026), p. 7, cuadro 1"
+"Importaciones totales, acum. ene-sep 2026",56068.79,56069,-0.21,OK,Ídem
+"Saldo comercial de bienes, acum. ene-sep 2026",21198.25,21198,0.25,OK,Ídem
+"Saldo comercial de bienes, acum. ene-sep 2025",6046.17,6046,0.17,OK,Ídem
 "Saldo cap. 27, acum. ene-dic 2025 (versión de enero 2026)",6662.94,6663,-0.06,OK,"Informe ICA de diciembre 2025 (20/01/2026), cuadro del capítulo 27"
 "Saldo cap. 27, acum. ene-ago 2026",6576.25,6576,0.25,OK,"Informe ICA de agosto 2026 (18/09/2026), p. 28, cuadro 8"
 "Exportación cap. 27, sep-2026",1586.24,1586,0.24,OK,"Informe ICA de septiembre 2026 (19/10/2026), p. 28, cuadro 8"
@@ -9,7 +16,3 @@ dato,valor_leido,valor_publicado,diferencia,estado,donde
 "Importación cap. 27, acum. ene-sep 2026",2787.25,2787,0.25,OK,Ídem
 "Saldo cap. 27, acum. ene-sep 2026",7999.62,8000,-0.38,OK,Ídem
 "Saldo cap. 27, acum. ene-sep 2025 (revisado)",4503.25,4503,0.25,OK,Ídem
-"Exportaciones totales, acum. ene-sep 2026",77267.05,77267,0.05,OK,"Informe ICA de septiembre 2026 (19/10/2026), p. 7, cuadro 1"
-"Importaciones totales, acum. ene-sep 2026",56068.79,56069,-0.21,OK,Ídem
-"Saldo comercial de bienes, acum. ene-sep 2026",21198.25,21198,0.25,OK,Ídem
-"Saldo comercial de bienes, acum. ene-sep 2025",6046.17,6046,0.17,OK,Ídem

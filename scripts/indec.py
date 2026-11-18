@@ -17,7 +17,11 @@ Qué hace:
       del capítulo 27 de la NCM (combustibles minerales): mes del informe, mismo mes del año
       anterior y, si está, el acumulado del año.
     - leer_cuadro1_acumulado(): lee del cuadro 1 el acumulado del año de exportaciones,
-      importaciones y saldo comercial de bienes.
+      importaciones y saldo comercial de bienes. Probado solo en informes de marzo a noviembre:
+      en los de diciembre y febrero la fila del acumulado se llama distinto.
+    - leer_cuadro_rubros_usos(): lee, del Excel de cuadros de un informe, las exportaciones de
+      Combustibles y energía (CyE) y las importaciones de Combustibles y lubricantes (CyL), del
+      mes y acumuladas, para el año en curso y el anterior.
     - leer_capitulo_anual(): lee un cuadro anual por capítulos de la NCM (exp_ncm_AA_AA.xls,
       imp_ncm_AA_AA.xls) y devuelve la fila del capítulo 27.
     - leer_rubros_usos_mensual(): lee la serie mensual por grandes rubros y usos económicos de
@@ -274,6 +278,82 @@ def leer_cuadro1_acumulado(ruta: Path) -> dict:
     # Columnas: exportaciones (2 = año en curso, 3 = anterior), importaciones (6, 7), saldo (10, 11).
     return {"actual": {"expo": leer(2), "impo": leer(6), "saldo": leer(10)},
             "anterior": {"expo": leer(3), "impo": leer(7), "saldo": leer(11)}}
+
+
+def _hoja_por_patron(libro: xlrd.book.Book, patron: str) -> xlrd.sheet.Sheet:
+    """Busca la única hoja cuyo título (celda A1) cumple la expresión regular `patron`."""
+    hojas = [h for h in libro.sheets() if h.nrows and re.search(patron, _texto(h.cell_value(0, 0)))]
+    if len(hojas) != 1:
+        raise ValueError(f"Se esperaba 1 hoja con título '{patron}' y hay {len(hojas)}")
+    return hojas[0]
+
+
+def _leer_mes_y_acumulado(hoja: xlrd.sheet.Sheet, filas: dict[str, int], nombre: str) -> dict:
+    """Lee, de un cuadro con columnas "mes | acumulado", los valores de las filas pedidas.
+
+    Estructura de estos cuadros: la columna 3 tiene el mes del informe (año en curso) y la 4, el
+    mismo mes del año anterior; la 6 y la 7, el acumulado de los dos años. Arriba de los números
+    hay una fila con el nombre del mes, otra con los años y otra con la unidad.
+    """
+    fila_mes = next(r for r in range(10) if _texto(hoja.cell_value(r, 3)).lower() in MESES_NOMBRE)
+    numero_mes = MESES_NOMBRE.index(_texto(hoja.cell_value(fila_mes, 3)).lower()) + 1
+    anios = [int(re.match(r"\d{4}", _texto(hoja.cell_value(fila_mes + 1, c))).group()) for c in (3, 4)]
+    if anios[1] != anios[0] - 1:
+        raise ValueError(f"{nombre}: años inesperados {anios}")
+    if not _texto(hoja.cell_value(fila_mes + 2, 3)).startswith("Millones"):
+        raise ValueError(f"{nombre}: se esperaban millones de USD y dice '{hoja.cell_value(fila_mes + 2, 3)}'")
+
+    def valores(columna):
+        return {clave: float(hoja.cell_value(r, columna)) for clave, r in filas.items()}
+
+    resultado = {"mes": pd.Timestamp(anios[0], numero_mes, 1), "mes_actual": valores(3), "mes_anterior": valores(4)}
+    # El encabezado del acumulado dice "Acumulado hasta ...", "Primer bimestre" o, en diciembre de
+    # algunos años, "Doce meses".
+    if hoja.ncols >= 8 and _texto(hoja.cell_value(fila_mes, 6)).startswith(("Acumulado", "Primer", "Doce meses")):
+        resultado["acumulado"] = {"actual": valores(6), "anterior": valores(7)}
+    elif numero_mes == 1:  # en enero, el acumulado es el mismo mes
+        resultado["acumulado"] = {"actual": valores(3), "anterior": valores(4)}
+    else:
+        raise ValueError(f"{nombre}: falta el acumulado en un informe que no es de enero")
+    return resultado
+
+
+def leer_cuadro_rubros_usos(ruta: Path) -> dict:
+    """Lee del Excel de cuadros de un informe del ICA las exportaciones de Combustibles y energía
+    (CyE) y las importaciones de Combustibles y lubricantes (CyL), con sus totales.
+
+    Cuadros que lee (el número cambia entre informes, por eso se buscan por título):
+        - "Exportaciones por grandes rubros y principales subrubros" (en 2025, "por principales
+          rubros y principales subrubros"; en enero de 2024, "por principales rubros."): fila
+          "Total" y fila del gran rubro "Combustibles y energía (CyE)".
+        - "Importaciones, según usos económicos, grandes categorías económicas (GCE) y agregados
+          especiales": fila "Total general" y fila del uso económico "Combustibles y lubricantes"
+          (columna 1; las filas de la columna 2 son subcategorías GCE y no se usan).
+    Devuelve {"mes", "hojas", "mes_actual", "mes_anterior", "acumulado": {"actual", "anterior"}},
+    cada uno con expo_total, expo_cye, impo_total e impo_cyl en millones de USD ("hojas" dice de
+    qué hoja del Excel sale cada flujo).
+    """
+    libro = xlrd.open_workbook(ruta)
+    expo = _hoja_por_patron(libro, r"^Cuadro \d+\. Exportaciones por (grandes|principales) rubros(\.| y principales subrubros)")
+    impo = _hoja_por_patron(libro, r"^Cuadro \d+\. - Importaciones, según usos económicos")
+
+    def fila(hoja, columna, prefijo):
+        return next(r for r in range(hoja.nrows) if _texto(hoja.cell_value(r, columna)).startswith(prefijo))
+
+    leido_expo = _leer_mes_y_acumulado(expo, {"expo_total": fila(expo, 0, "Total"),
+                                              "expo_cye": fila(expo, 1, "Combustibles y energía")}, ruta.name)
+    leido_impo = _leer_mes_y_acumulado(impo, {"impo_total": fila(impo, 0, "Total general"),
+                                              "impo_cyl": fila(impo, 1, "Combustibles y lubricantes")}, ruta.name)
+    if leido_expo["mes"] != leido_impo["mes"]:
+        raise ValueError(f"{ruta.name}: el cuadro de exportaciones y el de importaciones son de meses distintos")
+    return {
+        "mes": leido_expo["mes"],
+        "hojas": {"expo": expo.name, "impo": impo.name},  # por ejemplo c12 y c14, para citar el cuadro
+        "mes_actual": {**leido_expo["mes_actual"], **leido_impo["mes_actual"]},
+        "mes_anterior": {**leido_expo["mes_anterior"], **leido_impo["mes_anterior"]},
+        "acumulado": {clave: {**leido_expo["acumulado"][clave], **leido_impo["acumulado"][clave]}
+                      for clave in ("actual", "anterior")},
+    }
 
 
 def leer_capitulo_anual(ruta: Path) -> dict[str, dict[int, float]]:

@@ -1,7 +1,7 @@
-periodo,expo_cap27_musd,impo_cap27_musd,saldo_cap27_musd,saldo_comercial_bienes_musd,peso_saldo_cap27_pct,fuente
-2023,6563.1,7763.0,-1200.0,-6860.6,17.5,"Anual oficial: INDEC, exp_ncm_21_25.xls y imp_ncm_21_25.xls; exp_gr_80 e imp_uso_econ_80 (saldo de bienes)"
-2024,8239.2,3777.8,4461.4,18927.6,23.6,"Anual oficial: INDEC, exp_ncm_21_25.xls y imp_ncm_21_25.xls; exp_gr_80 e imp_uso_econ_80 (saldo de bienes)"
-2025,9717.8,3042.5,6675.3,11320.1,59.0,"Anual oficial: INDEC, exp_ncm_21_25.xls y imp_ncm_21_25.xls; exp_gr_80 e imp_uso_econ_80 (saldo de bienes)"
-2025 ene-sep,7074.7,2571.5,4503.2,6046.2,74.5,Acumulado oficial del informe ICA del 19/10/2026 (cuadro 8 y cuadro 1)
-2026 ene-sep,10786.9,2787.2,7999.6,21198.3,37.7,Acumulado oficial del informe ICA del 19/10/2026 (cuadro 8 y cuadro 1)
-12 meses a sep-2026,13429.9,3258.3,10171.6,26472.2,38.4,Derivado de oficiales: 2025 + ene-sep 2026 - ene-sep 2025
+periodo,expo_cye_musd,impo_cyl_musd,saldo_cye_cyl_musd,saldo_comercial_bienes_musd,peso_saldo_energetico_pct,nota,fuente
+2023,7927.6,7886.6,41.0,-6860.6,-0.6,Signos distintos: el cociente no se lee como peso,"Anual oficial: INDEC, exp_gr_80_25.xls (CyE y exportaciones totales) e imp_uso_econ_80_25.xls (CyL e importaciones totales)"
+2024,9717.1,3987.1,5730.0,18927.6,30.3,,"Anual oficial (provisorio): INDEC, exp_gr_80_25.xls (CyE y exportaciones totales) e imp_uso_econ_80_25.xls (CyL e importaciones totales)"
+2025,11100.2,3271.1,7829.1,11320.1,69.2,,"Anual oficial (provisorio): INDEC, exp_gr_80_25.xls (CyE y exportaciones totales) e imp_uso_econ_80_25.xls (CyL e importaciones totales)"
+2025 ene-sep,8106.0,2746.9,5359.1,6046.2,88.6,,"Acumulado oficial del informe ICA del 19/10/2026 (hojas c12 y c14 del Excel de cuadros; saldo de bienes, cuadro 1)"
+2026 ene-sep,12452.3,3024.5,9427.8,21198.3,44.5,,"Acumulado oficial del informe ICA del 19/10/2026 (hojas c12 y c14 del Excel de cuadros; saldo de bienes, cuadro 1)"
+12 meses a sep-2026,15446.5,3548.7,11897.7,26472.2,44.9,,Derivado de oficiales: 2025 + ene-sep 2026 - ene-sep 2025
