@@ -27,6 +27,11 @@ Repositorio de datos y código de "Sobre Modelos y Tumbas", publicación de Agus
 4. Valores nominales vs. reales: si se deflacta, decir con qué índice.
 5. Contrastar al menos un dato por serie contra el informe oficial publicado (ej.: el informe técnico del INDEC) y dejar la comparación en el informe de validación.
 
+## Reglas de trabajo
+- No decidir criterios económicos. Ante cualquier decisión de definición, serie, agrupación, método, período o unidad: frenar, presentar las opciones con sus pros y contras, y esperar la decisión de Agustín (que la valida en el chat del proyecto contra al menos 5 fuentes profesionales).
+- Todo lo que se entrega es auditado en el chat del proyecto: citar URL/ID y cuadro de cada dato, separar lo verificado de lo supuesto, y antes de afirmar que un dato no existe listar todas las fuentes revisadas.
+- Seguir la convención del INDEC, la Secretaría de Energía, el BCRA y las consultoras, salvo razón fuerte y documentada.
+
 ## Forma de trabajar
 - Antes de hacer `git push`, mostrarle a Agustín qué cambió y esperar su ok.
 - Commits chicos, con mensajes en español que digan qué se hizo.
