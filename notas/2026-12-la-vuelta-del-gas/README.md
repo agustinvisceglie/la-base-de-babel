@@ -67,4 +67,4 @@ Fuente sugerida para los gráficos: *"Fuente: INDEC, Intercambio comercial argen
 
 g1, g2 y las cifras se armaron con la base del commit que se anota abajo (crudos al 18/11/2026). Para reproducirlos exactamente: `git checkout <commit>`, y después los dos comandos de "Cómo reproducir todo".
 
-- Commit de la base: *(se anota en el commit siguiente al del Paso 3b)*
+- Commit de la base: `0f52f62` (Paso 3b, 25/11/2026), armada con `actualizar.py --crudos-al 2026-11-18`.
