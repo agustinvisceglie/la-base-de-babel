@@ -84,7 +84,9 @@ SESCO_DIARIA = {
 
 # Columnas de los archivos por pozo que se usan (el archivo trae 38 a 40).
 COLUMNAS_POZOS = ["anio", "mes", "idpozo", "prod_pet", "prod_gas", "formprod", "tipo_de_recurso",
-                  "sub_tipo_recurso", "cuenca", "fechaingreso"]
+                  "sub_tipo_recurso", "cuenca", "areayacimiento", "fechaingreso"]
+# Columnas de texto que se guardan como categorías (los archivos tienen ~1 millón de filas por año).
+COLUMNAS_CATEGORIA = ["formprod", "tipo_de_recurso", "sub_tipo_recurso", "cuenca", "areayacimiento"]
 
 
 LIMITE_SIN_OK_BYTES = 1_000_000_000  # regla 8 del instructivo: más de 1 GB en total requiere el ok de Agustín
@@ -230,8 +232,27 @@ def descargar_series_agregadas() -> tuple[dict[str, pd.DataFrame], list[dict]]:
 
 def _leer_pozos(tabla: pd.DataFrame) -> pd.DataFrame:
     tabla = tabla[COLUMNAS_POZOS].copy()
+    for columna in COLUMNAS_CATEGORIA:
+        tabla[columna] = tabla[columna].astype("category")
     tabla["fecha"] = pd.to_datetime(dict(year=tabla["anio"], month=tabla["mes"], day=1))
     return tabla
+
+
+def versiones_pozos(nombre: str) -> list[dict]:
+    """Versiones guardadas (distinto hash) de un archivo por pozo, según el registro de versiones:
+    ruta de la copia, hash y fecha de publicación (si el portal republicó el mismo contenido, la
+    más reciente). Ordenadas de la más vieja a la más nueva."""
+    registro = pd.read_csv(REGISTRO_VERSIONES)
+    filas = registro[registro["archivo"] == (CARPETA / nombre).relative_to(RAIZ).as_posix()]
+    versiones = filas.groupby(["sha256", "version"], as_index=False)["fecha_publicacion"].max()
+    return [{"ruta": RAIZ / v.version, "sha256": v.sha256, "fecha_publicacion": v.fecha_publicacion}
+            for v in versiones.sort_values("fecha_publicacion").itertuples()]
+
+
+def leer_pozos_version(ruta) -> pd.DataFrame:
+    """Lee una versión guardada de un archivo por pozo (mismas columnas que las funciones de descarga)."""
+    tabla = pd.read_csv(ruta, encoding="utf-8-sig", low_memory=False, usecols=lambda c: c in COLUMNAS_POZOS)
+    return _leer_pozos(tabla)
 
 
 def descargar_pozos_no_convencional() -> tuple[pd.DataFrame, dict]:

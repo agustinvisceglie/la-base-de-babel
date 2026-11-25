@@ -1,13 +1,35 @@
 # Informe de validación: producción de petróleo y gas
 
-Series genéricas del bloque Energía (no atadas a una nota). Armador: `series/produccion_hidrocarburos.py`. Lectores: `scripts/secretaria_energia.py`. Corrida: 18/11/2026.
+Series genéricas del bloque Energía (no atadas a una nota). Armador: `series/produccion_hidrocarburos.py`. Lectores: `scripts/secretaria_energia.py`. Última corrida: 25/11/2026 (Paso 1 del instructivo). Las secciones posteriores a "Actualización del 25/11/2026" describen la corrida del 18/11/2026 y quedan como antecedente; los CSV de `datos/validacion/` tienen los números vigentes.
+
+## Actualización del 25/11/2026 (Paso 1): Vaca Muerta con la variante "DDJJ abiertas y cerradas"
+
+Criterio aplicado (criterios, sección 3, aprobado el 19/11): volúmenes por pozo de la variante "DDJJ abiertas y cerradas" de cada año, y clasificación de cada pozo (tipo de recurso, subtipo y formación) tomada de la publicación más reciente de la SE que lo contiene. La base usa el dato vigente; la primera difusión queda como control.
+
+**Versiones usadas** (todas consultadas el 25/11/2026; hashes en `versiones_crudos.csv`):
+- Series agregadas de petróleo y gas: publicadas el 21/11/2026. Llegan a **10/2026**, que pasa a ser el último mes completo.
+- DDJJ abiertas y cerradas 2010–2026: 17 archivos. Seis se republicaron después del 18/11; 2018, 2019, 2020, 2022 y 2024 con el mismo contenido (mismo hash; solo se anotó la fecha nueva) y 2026 con contenido nuevo (24/11/2026).
+- Archivo no convencional: 22/11/2026 (contenido nuevo).
+- Para la clasificación se usan los 17 DDJJ y el archivo no convencional en todas sus versiones guardadas (20 publicaciones: además, el DDJJ 2026 del 18/11 y el no convencional del 22/10).
+
+**Controles** (`produccion_controles.csv`):
+- **DDJJ con la clasificación vigente vs. serie agregada, 202 meses (01/2010–10/2026), `produccion_ddjj_vs_serie.csv`:** cierran todos, en total, shale y tight, petróleo y gas. Diferencia máxima: petróleo total 0,046 m³, gas total 0,019 miles de m³, shale y tight 0,0001.
+- **Con la clasificación propia de cada archivo** no cierran 8 meses (gas shale de 05 a 12/2023, por ejemplo −12.241,91 miles de m³ en 08/2023): es el pozo reclasificado de 2023.
+- **Clasificación:** ningún pozo tiene más de una clasificación dentro de una misma publicación; las 20 publicaciones tienen fechas distintas (no hay empates). Aplicar la regla por pozo o por pozo-mes da el mismo resultado (0 pozo-mes distintos).
+- **Reclasificaciones (`produccion_reclasificaciones.csv`): 3 pozos.**
+  - 164323 (Aguada Pichana Oeste, Neuquina): CONVENCIONAL / VMUT en el DDJJ 2023 (05/06/2026); NO CONVENCIONAL / SHALE / VMUT en el no convencional y en los DDJJ 2024–2026. 8 pozo-mes (05–12/2023), 0 m³ de petróleo y 71.544,42 miles de m³ de gas pasan de convencional a shale y a Vaca Muerta.
+  - 164921 y 165823 (Cañadón Seco, Golfo San Jorge): siguen TIGHT; solo cambia la formación (CSEC y BBAR en el DDJJ 2023/2025 y en el no convencional del 22/10; POD1 en el del 22/11 y en el DDJJ 2026). No afectan shale, tight ni Vaca Muerta.
+- **Vaca Muerta con los DDJJ vs. con el archivo no convencional (`produccion_vaca_muerta_ddjj_vs_no_convencional.csv`):** difieren solo los 4 meses en que el archivo no convencional no cerraba contra la serie: 06/2015 (+163,4 m³), 01/2019 (+501,7), 03/2019 (+18.024,2) y 09/2024 (+157.933,4 m³ de petróleo y +16.174,0 miles de m³ de gas). Septiembre de 2024 pasa de 385,3 a 418,45 kbbl/d.
+- **Vaca Muerta en 07/2026:** 643,12 kbbl/d, contra 643,1 difundido (0,00%).
+
+**Versiones de 2026.** La diferencia de +0,26% de 08 y 09/2026 (DDJJ del 18/11 contra serie del 21/10) desapareció: la serie del 21/11 sumó exactamente +11.906,0 m³ en agosto y +12.027,1 m³ en septiembre, y el DDJJ no cambió esos meses entre el 18/11 y el 24/11. Con las versiones vigentes, la diferencia de 08, 09 y 10/2026 es de −0,04 m³. Petróleo de septiembre de 2026: 972,15 kbbl/d (la serie del 21/10 daba 969,63; la primera difusión fue 973,7).
 
 ## Series generadas
 
 | Archivo | Qué es | Período |
 |---|---|---|
-| `datos/procesados/produccion_petroleo_gas_mensual.csv` | Petróleo y gas, total y por subtipo de recurso (convencional, shale y tight): volumen del mes y promedio diario | 01/2006–09/2026 |
-| `datos/procesados/produccion_vaca_muerta_mensual.csv` | Vaca Muerta (formprod VMUT + tipo de recurso NO CONVENCIONAL): volumen del mes, promedio diario, pozos con registro y columna `control_cobertura` | 01/2010–09/2026 |
+| `datos/procesados/produccion_petroleo_gas_mensual.csv` | Petróleo y gas, total y por subtipo de recurso (convencional, shale y tight): volumen del mes y promedio diario | 01/2006–10/2026 (al 25/11/2026) |
+| `datos/procesados/produccion_vaca_muerta_mensual.csv` | Vaca Muerta (formprod VMUT + tipo de recurso NO CONVENCIONAL, con la clasificación más reciente de la SE; volúmenes de los DDJJ abiertas y cerradas): volumen del mes, promedio diario, pozos con registro y columna `control_shale_vs_serie` (hasta el 18/11 se llamaba `control_cobertura` y salía del archivo no convencional) | 01/2010–10/2026 (al 25/11/2026) |
 
 **Unidades:**
 - Petróleo: m³ del mes, m³/d (m³ ÷ días del mes) y kbbl/d (m³ × 6,28981 ÷ días del mes ÷ 1.000).
@@ -191,12 +213,14 @@ No se ajustó nada para que cierre.
 
 ## Decisiones abiertas hasta que una nota las necesite
 
-1. Promedio anual (volumen ÷ días o promedio de meses) y presentación del año en curso.
-2. Corte común o último dato disponible por serie. Hoy las dos series terminan en 09/2026.
-3. Fuente de los meses recientes: serie agregada (21/10) o archivo por pozo (18/11).
-4. Qué hacer con los meses que los datos por pozo no cubren (09/2024 y otros).
+*Actualizado el 25/11/2026:* los puntos 2 a 4 quedaron resueltos (criterios, sección 3, y arquitectura aprobada): la base guarda hasta el último mes completo de cada fuente y el corte lo define cada nota; la serie es el dato vigente de la SE; Vaca Muerta sale de la variante "DDJJ abiertas y cerradas", que cubre los meses que faltaban (09/2024 y los demás). Sigue abierto el 1.
 
-Mientras tanto, la base guarda las dos fuentes y todas sus versiones:
-- las series procesadas salen de la serie agregada (nacional) y del archivo no convencional (Vaca Muerta);
+1. Promedio anual (volumen ÷ días o promedio de meses) y presentación del año en curso.
+2. *(Resuelto)* Corte común o último dato disponible por serie.
+3. *(Resuelto)* Fuente de los meses recientes.
+4. *(Resuelto)* Qué hacer con los meses que los datos por pozo no cubren.
+
+La base guarda las dos fuentes y todas sus versiones:
+- las series procesadas salen de la serie agregada (nacional) y de los DDJJ abiertas y cerradas con la clasificación más reciente (Vaca Muerta);
 - los archivos por pozo y cada versión de cada crudo quedan en `datos/crudos/secretaria_energia/versiones/` (registro en `versiones_crudos.csv`);
 - la comparación mes a mes entre las dos fuentes queda en `produccion_versiones_2026.csv` y `produccion_anuales_vs_serie.csv`.

@@ -2,7 +2,7 @@
 Series de producción de petróleo y gas de la Argentina (bloque Energía).
 
 Ubicación provisoria: la carpeta series/ guarda los armadores de series genéricas (no atadas a una
-nota) hasta que se defina la arquitectura del repositorio.
+nota) hasta que se migre a la arquitectura aprobada (Paso 3c del instructivo).
 
 Qué hace:
     1. Serie mensual nacional de petróleo y gas por subtipo de recurso (convencional, shale y tight)
@@ -10,20 +10,30 @@ Qué hace:
        recurso (Capítulo IV)", desde enero de 2006 hasta el último mes publicado.
        - Convencional = total - shale - tight. Para la SE, no convencional = shale + tight: su columna
          de participación no convencional es (shale + tight) / total (control "no convencional").
-    2. Serie mensual de Vaca Muerta desde enero de 2010: suma de los pozos con formación productiva
-       (formprod) VMUT y tipo de recurso NO CONVENCIONAL del archivo por pozo de pozos no convencionales.
+    2. Serie mensual de Vaca Muerta desde enero de 2010 (criterios, sección 3, y Paso 1 del instructivo):
+       - volúmenes por pozo de la variante "DDJJ abiertas y cerradas" de cada año (2010-2026);
+       - clasificación de cada pozo (tipo de recurso, subtipo y formación) tomada de la publicación
+         más reciente de la SE que lo contiene, entre los DDJJ de cada año y el archivo de pozos no
+         convencionales, en todas sus versiones guardadas (regla general, no un parche por pozo);
+       - Vaca Muerta = formación productiva (formprod) VMUT y tipo de recurso NO CONVENCIONAL.
     3. Controles (en datos/validacion/):
        - internos de las series agregadas (meses, vacíos, unidades, factor, subtipos, cuencas);
-       - archivo no convencional vs. serie agregada: shale y tight, todos los meses, y lista de los
-         meses que no cierran (en volumen, en promedio diario y en %);
-       - evidencia de la regla de la SE "pozo no convencional sin subtipo = tight";
+       - DDJJ con la clasificación vigente vs. serie agregada, mes por mes desde 2010: total, shale y
+         tight, petróleo y gas (tight = TIGHT + no convencional sin subtipo, regla de la SE), y lo que
+         daría la clasificación propia de cada archivo;
+       - reclasificaciones: todo pozo cuya clasificación difiere entre publicaciones o versiones, con
+         el volumen que cambia de agregado al aplicar la regla;
+       - Vaca Muerta con los DDJJ vs. Vaca Muerta con el archivo no convencional (método anterior);
+       - archivo no convencional vs. serie agregada (shale y tight) y evidencia de la regla "no
+         convencional sin subtipo = tight";
        - cobertura del archivo no convencional vs. archivos anuales completos (ANIOS_COBERTURA), y
          esos anuales vs. la serie agregada (total, shale y tight);
        - corte: ninguna serie puede tener meses posteriores al último mes completo de la fuente
          oficial (el último mes de la serie agregada); si pasa, el script se detiene;
-       - versiones: serie agregada vs. archivo anual de 2026 (más reciente), por mes, y registros
-         cargados después de la serie agregada;
+       - versiones: serie agregada vs. archivo anual de 2026 (más reciente), por mes;
        - primera difusión vs. dato vigente (sin aprobar ni rechazar: se muestra la revisión).
+    Antes de bajar nada revisa el portal: si no responde, o si lo que cambió supera 1 GB y no se pasó
+    --ok-descarga-grande, frena sin bajar (regla 8 del instructivo).
     Cada archivo crudo se guarda también como versión (fecha de publicación + hash) en
     datos/crudos/secretaria_energia/versiones/, sin pisar las anteriores; el registro queda en
     datos/validacion/versiones_crudos.csv.
@@ -32,9 +42,7 @@ Unidades:
     - petróleo: m3 del mes, m3/d (m3 ÷ días del mes) y kbbl/d (m3 × 6,28981 ÷ días del mes ÷ 1.000);
     - gas: miles de m3 del mes y MMm3/d (miles de m3 ÷ días del mes ÷ 1.000).
 
-Decisiones pendientes (no se toman acá): promedio anual; corte común o último dato disponible;
-    qué hacer con los meses en que el archivo no convencional no cubre todo (columna
-    control_cobertura de la serie de Vaca Muerta).
+Decisiones pendientes (no se toman acá): promedio anual; corte común de cada nota.
 
 Fuentes: SE, datos.energia.gob.ar (detalle en scripts/secretaria_energia.py).
 
@@ -42,6 +50,9 @@ Genera:
     - datos/procesados/produccion_petroleo_gas_mensual.csv
     - datos/procesados/produccion_vaca_muerta_mensual.csv
     - datos/validacion/produccion_controles.csv
+    - datos/validacion/produccion_ddjj_vs_serie.csv
+    - datos/validacion/produccion_reclasificaciones.csv
+    - datos/validacion/produccion_vaca_muerta_ddjj_vs_no_convencional.csv
     - datos/validacion/produccion_no_convencional_vs_serie.csv
     - datos/validacion/produccion_regla_sin_subtipo.csv
     - datos/validacion/produccion_meses_que_no_cierran.csv
@@ -52,15 +63,17 @@ Genera:
     - datos/validacion/descargas_produccion.csv
 
 Uso (desde la raíz del repositorio):
-    .venv/Scripts/python series/produccion_hidrocarburos.py
+    .venv/Scripts/python series/produccion_hidrocarburos.py [--ok-descarga-grande]
 """
 
+import argparse
 import sys
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RAIZ))  # para poder importar scripts/ al correr este archivo directamente
 
+import numpy as np
 import pandas as pd
 
 from scripts import secretaria_energia as se
@@ -71,13 +84,13 @@ VALIDACION = RAIZ / "datos" / "validacion"
 BARRILES_POR_M3 = 6.28981  # el mismo factor que usa la SE en su columna kbbl_diario (ver controles)
 SUBTIPOS = ["total", "convencional", "shale", "tight"]
 DESDE_VACA_MUERTA = "2010-01-01"
+# Tolerancia para decir que una suma por pozo "cierra" contra la serie agregada: la serie viene
+# redondeada (la misma que se usó en eb152d9). Las diferencias se informan siempre, cierren o no.
+TOLERANCIA_SERIE = 0.5
 # Años en que se contrastan los archivos anuales completos (todos los pozos) contra el archivo no
 # convencional y contra la serie agregada. 2015: uno de 2010-2015, con un mes que no cierra (06/2015);
 # 2024: el año del hueco de 09/2024; 2026: el más reciente.
 ANIOS_COBERTURA = [2015, 2024, 2026]
-# Fecha de la serie agregada usada (última actualización en el portal). Sirve para identificar los
-# registros por pozo cargados después.
-FECHA_SERIE_AGREGADA = "2026-10-21"
 
 # Primera difusión de cada cifra, con su fuente (verificada en la página el 18/11/2026; detalle en
 # datos/validacion/produccion_informe_validacion.md). (serie, mes, valor, unidad, fuente)
@@ -109,7 +122,7 @@ PRIMERA_DIFUSION = [
 
 
 # ---------------------------------------------------------------------------------------------
-# 1. Series
+# 1. Serie nacional (serie agregada de la SE)
 # ---------------------------------------------------------------------------------------------
 def armar_nacional(petroleo: pd.DataFrame, gas: pd.DataFrame) -> pd.DataFrame:
     """Petróleo y gas por subtipo de recurso: volumen del mes y promedio diario."""
@@ -134,10 +147,216 @@ def armar_nacional(petroleo: pd.DataFrame, gas: pd.DataFrame) -> pd.DataFrame:
     return serie
 
 
+# ---------------------------------------------------------------------------------------------
+# 2. Datos por pozo: variante "DDJJ abiertas y cerradas" con la clasificación más reciente
+# ---------------------------------------------------------------------------------------------
+def clave_clasificacion(tabla: pd.DataFrame) -> pd.Series:
+    """Clasificación de cada fila como texto "tipo de recurso|subtipo|formación" (vacío si falta)."""
+    tipo, subtipo, formacion = (tabla[c].astype("string").fillna("") for c in ("tipo_de_recurso", "sub_tipo_recurso", "formprod"))
+    return tipo + "|" + subtipo + "|" + formacion
+
+
+def atributos_claves(claves) -> pd.DataFrame:
+    """Para cada clave de clasificación: tipo, subtipo, formación y a qué agregado va. Reglas de la
+    SE: no convencional = shale + tight; un pozo no convencional sin subtipo cuenta como tight
+    (evidencia en produccion_regla_sin_subtipo.csv); Vaca Muerta = formación VMUT y no convencional."""
+    tabla = pd.Series(sorted(set(claves)), dtype="string").str.split("|", expand=True)
+    tabla.columns = ["tipo_de_recurso", "sub_tipo_recurso", "formprod"]
+    tabla.index = tabla["tipo_de_recurso"] + "|" + tabla["sub_tipo_recurso"] + "|" + tabla["formprod"]
+    tabla.index.name = "clave"
+    no_convencional = tabla["tipo_de_recurso"] == "NO CONVENCIONAL"
+    tabla["shale"] = no_convencional & (tabla["sub_tipo_recurso"] == "SHALE")
+    tabla["tight"] = no_convencional & (tabla["sub_tipo_recurso"] != "SHALE")
+    tabla["vaca_muerta"] = no_convencional & (tabla["formprod"] == "VMUT")
+    return tabla
+
+
+def compactar_publicacion(tabla: pd.DataFrame) -> pd.DataFrame:
+    """Una publicación por pozo reducida a lo que se usa: pozo, mes, volúmenes, clave de clasificación,
+    campo (areayacimiento) y cuenca."""
+    return pd.DataFrame({"idpozo": tabla["idpozo"].to_numpy(), "anio": tabla["anio"].to_numpy(),
+                         "fecha": tabla["fecha"].to_numpy(), "prod_pet": tabla["prod_pet"].to_numpy(),
+                         "prod_gas": tabla["prod_gas"].to_numpy(),
+                         "clave": clave_clasificacion(tabla).astype("category").array,
+                         "campo": tabla["areayacimiento"].astype("category").array,
+                         "cuenca": tabla["cuenca"].astype("category").array})
+
+
+def clasificacion_por_publicacion(nombre: str, compacta: pd.DataFrame, fecha_publicacion: str) -> pd.DataFrame:
+    """Una fila por pozo de una publicación: su clasificación (la de su último mes en ese archivo),
+    campo y cuenca, y cuántas clasificaciones distintas tiene dentro de esa misma publicación."""
+    distintas = compacta.groupby("idpozo", observed=True)["clave"].nunique()
+    ultima = compacta.sort_values("fecha", kind="stable").groupby("idpozo", observed=True).tail(1).set_index("idpozo")
+    resultado = pd.DataFrame({"clave": ultima["clave"].astype("string"), "campo": ultima["campo"].astype("string"),
+                              "cuenca": ultima["cuenca"].astype("string")})
+    resultado["clasificaciones_en_la_publicacion"] = distintas.reindex(resultado.index)
+    resultado["publicacion"] = nombre
+    resultado["fecha_publicacion"] = fecha_publicacion
+    return resultado.reset_index()
+
+
+def clasificacion_vigente(por_publicacion: pd.DataFrame) -> pd.DataFrame:
+    """Clasificación de cada pozo según la publicación más reciente de la SE que lo contiene
+    (criterios, sección 3: regla general, no un parche por pozo). Índice: idpozo."""
+    return (por_publicacion.sort_values(["fecha_publicacion", "publicacion"], kind="stable")
+            .groupby("idpozo").tail(1).set_index("idpozo"))
+
+
+def sumas_mensuales(volumenes: pd.DataFrame, claves: pd.Series, atributos: pd.DataFrame) -> pd.DataFrame:
+    """Suma mensual de los volúmenes por pozo: total, shale, tight y Vaca Muerta (petróleo y gas),
+    con la clave de clasificación indicada para cada fila (`claves`, en el mismo orden que
+    `volumenes`), y pozos de Vaca Muerta con registro."""
+    claves = pd.Series(claves).astype("category")
+    codigos = claves.cat.codes.to_numpy()
+    posiciones = atributos.index.get_indexer(pd.Index(claves.cat.categories.astype(object)))
+    if len(codigos) != len(volumenes) or (codigos < 0).any() or (posiciones < 0).any():
+        raise ValueError("Hay pozo-mes sin clasificación: no se puede sumar")
+    fila = posiciones[codigos]
+    pet, gas = volumenes["prod_pet"].to_numpy(), volumenes["prod_gas"].to_numpy()
+    tabla = pd.DataFrame({"fecha": volumenes["fecha"].to_numpy(), "petroleo_total": pet, "gas_total": gas})
+    for agregado in ("shale", "tight", "vaca_muerta"):
+        marca = atributos[agregado].to_numpy(dtype=bool)[fila]
+        tabla[f"petroleo_{agregado}"] = np.where(marca, pet, 0.0)
+        tabla[f"gas_{agregado}"] = np.where(marca, gas, 0.0)
+    tabla["pozos_vaca_muerta"] = atributos["vaca_muerta"].to_numpy(dtype=int)[fila]
+    return tabla.groupby("fecha").sum()
+
+
+def ddjj_vs_serie(vigentes: pd.DataFrame, propias: pd.DataFrame, petroleo: pd.DataFrame, gas: pd.DataFrame) -> pd.DataFrame:
+    """Verificación mes por mes: DDJJ con la clasificación vigente vs. serie agregada de la SE (total,
+    shale y tight, petróleo y gas), y la diferencia que daría la clasificación propia de cada archivo."""
+    series = {"petroleo": {"total": petroleo["total"], "shale": petroleo["shale"], "tight": petroleo["tight"]},
+              "gas": {"total": gas["produccion_gas_natural_total"], "shale": gas["produccion_shale_gas"],
+                      "tight": gas["produccion_tight_gas"]}}
+    meses = vigentes.index.intersection(petroleo.index).intersection(gas.index)
+    tabla = pd.DataFrame(index=meses)
+    for producto, por_agregado in series.items():
+        for agregado, serie in por_agregado.items():
+            tabla[f"{producto}_{agregado}_ddjj"] = vigentes.loc[meses, f"{producto}_{agregado}"]
+            tabla[f"{producto}_{agregado}_serie"] = serie.loc[meses]
+            tabla[f"{producto}_{agregado}_dif"] = tabla[f"{producto}_{agregado}_ddjj"] - tabla[f"{producto}_{agregado}_serie"]
+        for agregado in ("shale", "tight"):
+            tabla[f"{producto}_{agregado}_dif_clasificacion_propia"] = (propias.loc[meses, f"{producto}_{agregado}"]
+                                                                        - por_agregado[agregado].loc[meses])
+    dias = pd.Series(meses.days_in_month, index=meses)
+    tabla["petroleo_total_dif_kbbl_d"] = tabla["petroleo_total_dif"] * BARRILES_POR_M3 / dias / 1000
+    tabla["petroleo_total_dif_pct"] = 100 * tabla["petroleo_total_dif"] / tabla["petroleo_total_serie"]
+    tabla["gas_total_dif_pct"] = 100 * tabla["gas_total_dif"] / tabla["gas_total_serie"]
+    columnas_dif = [f"{p}_{a}_dif" for p in ("petroleo", "gas") for a in ("total", "shale", "tight")]
+    tabla["cierra"] = (tabla[columnas_dif].abs() <= TOLERANCIA_SERIE).all(axis=1)
+    tabla.index.name = "fecha"
+    return tabla
+
+
+def _describir(clave: str) -> str:
+    tipo, subtipo, formacion = clave.split("|")
+    return f"{tipo or '(sin tipo)'} / {subtipo or '(sin subtipo)'} / {formacion or '(sin formación)'}"
+
+
+def _nombre_publicacion(nombre: str, fecha_publicacion: str) -> str:
+    return f"{nombre} (publicado el {pd.Timestamp(fecha_publicacion):%d/%m/%Y})"
+
+
+def reclasificaciones(por_publicacion: pd.DataFrame, vigente: pd.DataFrame, publicaciones: dict, volumenes: pd.DataFrame,
+                      atributos: pd.DataFrame) -> pd.DataFrame:
+    """Pozos cuya clasificación difiere entre publicaciones o versiones de la SE. Una fila por pozo y por
+    clasificación distinta de la vigente, con campo y cuenca, la publicación más vieja y la más nueva que
+    tienen esa clasificación, la publicación vigente y su clasificación, y los pozo-mes de los DDJJ que
+    cambian de clasificación al aplicar la regla (con su volumen).
+
+    Control de la regla: cuántos de esos pozo-mes tendrían otra clasificación si la regla se aplicara
+    por pozo-mes (la publicación más reciente que contiene ese mes) en lugar de por pozo."""
+    distintas = por_publicacion.groupby("idpozo")["clave"].nunique()
+    pozos = distintas[distintas > 1].index
+    columnas = ["idpozo", "campo", "cuenca", "clasificacion_anterior", "primera_publicacion_con_la_anterior",
+                "ultima_publicacion_con_la_anterior", "publicaciones_con_la_anterior", "clasificacion_vigente",
+                "publicacion_vigente", "que_cambia", "cambia_vaca_muerta", "pozo_mes_ddjj_que_cambian", "desde", "hasta",
+                "petroleo_m3_que_cambia", "gas_miles_m3_que_cambia", "pozo_mes_distintos_si_la_regla_fuera_por_pozo_mes"]
+    if len(pozos) == 0:
+        return pd.DataFrame(columns=columnas)
+
+    # Regla por pozo-mes, solo para estos pozos: la publicación más reciente que contiene cada pozo-mes.
+    presencia = pd.concat([c.loc[c["idpozo"].isin(pozos), ["idpozo", "fecha", "clave"]].assign(
+        clave=lambda x: x["clave"].astype("string"), fecha_publicacion=fecha)
+        for c, fecha in publicaciones.values()])
+    por_pozo_mes = presencia.sort_values("fecha_publicacion").groupby(["idpozo", "fecha"]).tail(1).set_index(["idpozo", "fecha"])["clave"]
+    propios = volumenes[volumenes["idpozo"].isin(pozos)].assign(clave=lambda x: x["clave"].astype("string"))
+
+    filas = []
+    for pozo in pozos:
+        vig = vigente.loc[pozo]
+        del_pozo = por_publicacion[por_publicacion["idpozo"] == pozo].sort_values("fecha_publicacion")
+        propios_pozo = propios[propios["idpozo"] == pozo]
+        alternativa = por_pozo_mes.reindex(pd.MultiIndex.from_arrays([propios_pozo["idpozo"], propios_pozo["fecha"]])).to_numpy()
+        for clave, grupo in del_pozo[del_pozo["clave"] != vig["clave"]].groupby("clave", sort=False):
+            cambian = propios_pozo[propios_pozo["clave"] == clave]
+            ant, nueva = atributos.loc[clave], atributos.loc[vig["clave"]]
+            filas.append({
+                "idpozo": pozo, "campo": vig["campo"], "cuenca": vig["cuenca"],
+                "clasificacion_anterior": _describir(clave),
+                "primera_publicacion_con_la_anterior": _nombre_publicacion(grupo["publicacion"].iloc[0], grupo["fecha_publicacion"].iloc[0]),
+                "ultima_publicacion_con_la_anterior": _nombre_publicacion(grupo["publicacion"].iloc[-1], grupo["fecha_publicacion"].iloc[-1]),
+                "publicaciones_con_la_anterior": len(grupo),
+                "clasificacion_vigente": _describir(vig["clave"]),
+                "publicacion_vigente": _nombre_publicacion(vig["publicacion"], vig["fecha_publicacion"]),
+                "que_cambia": ("tipo de recurso o subtipo" if (ant["tipo_de_recurso"], ant["sub_tipo_recurso"])
+                               != (nueva["tipo_de_recurso"], nueva["sub_tipo_recurso"]) else "solo la formación"),
+                "cambia_vaca_muerta": bool(ant["vaca_muerta"] != nueva["vaca_muerta"]),
+                "pozo_mes_ddjj_que_cambian": len(cambian),
+                "desde": cambian["fecha"].min(), "hasta": cambian["fecha"].max(),
+                "petroleo_m3_que_cambia": cambian["prod_pet"].sum(), "gas_miles_m3_que_cambia": cambian["prod_gas"].sum(),
+                "pozo_mes_distintos_si_la_regla_fuera_por_pozo_mes": int((alternativa != vig["clave"]).sum()),
+            })
+    return pd.DataFrame(filas, columns=columnas)
+
+
+def armar_vaca_muerta(vigentes: pd.DataFrame, verificacion: pd.DataFrame, ultimo_mes_completo: pd.Timestamp) -> pd.DataFrame:
+    """Vaca Muerta (formación VMUT y no convencional, clasificación vigente) desde enero de 2010 hasta el
+    último mes completo de la fuente oficial. La columna control marca los meses en que los DDJJ no
+    reproducen el shale de la serie agregada (petróleo o gas)."""
+    serie = vigentes.loc[(vigentes.index >= DESDE_VACA_MUERTA) & (vigentes.index <= ultimo_mes_completo),
+                         ["petroleo_vaca_muerta", "gas_vaca_muerta", "pozos_vaca_muerta"]]
+    serie = serie.reindex(pd.date_range(DESDE_VACA_MUERTA, serie.index.max(), freq="MS"))
+    serie.columns = ["petroleo_m3_mes", "gas_miles_m3_mes", "pozos_con_registro"]
+    serie.index.name = "fecha"
+    dias = pd.Series(serie.index.days_in_month, index=serie.index)
+    serie.insert(0, "dias_del_mes", dias)
+    serie["petroleo_m3_d"] = serie["petroleo_m3_mes"] / dias
+    serie["petroleo_kbbl_d"] = serie["petroleo_m3_mes"] * BARRILES_POR_M3 / dias / 1000
+    serie["gas_mm3_d"] = serie["gas_miles_m3_mes"] / dias / 1000
+    control = verificacion.reindex(serie.index)
+    serie["control_shale_vs_serie"] = [
+        "OK" if abs(p) <= TOLERANCIA_SERIE and abs(g) <= TOLERANCIA_SERIE else
+        f"REVISAR: el shale de los DDJJ difiere de la serie agregada en {p:,.1f} m3 de petróleo y {g:,.1f} miles de m3 de gas"
+        for p, g in zip(control["petroleo_shale_dif"], control["gas_shale_dif"])]
+    columnas = ["dias_del_mes", "petroleo_m3_mes", "petroleo_m3_d", "petroleo_kbbl_d", "gas_miles_m3_mes",
+                "gas_mm3_d", "pozos_con_registro", "control_shale_vs_serie"]
+    return serie[columnas]
+
+
+def vaca_muerta_vs_no_convencional(vaca_muerta: pd.DataFrame, pozos_nc: pd.DataFrame) -> pd.DataFrame:
+    """Vaca Muerta con los DDJJ (método vigente) vs. con el archivo de pozos no convencionales (método
+    anterior, solo DDJJ cerradas), por mes."""
+    vm = pozos_nc[(pozos_nc["formprod"] == "VMUT") & (pozos_nc["tipo_de_recurso"] == "NO CONVENCIONAL")]
+    anterior = vm.groupby("fecha").agg(petroleo_m3_no_convencional=("prod_pet", "sum"),
+                                       gas_miles_m3_no_convencional=("prod_gas", "sum"),
+                                       pozos_no_convencional=("idpozo", "nunique"))
+    tabla = vaca_muerta[["petroleo_m3_mes", "gas_miles_m3_mes", "pozos_con_registro"]].join(anterior)
+    tabla["dif_petroleo_m3"] = tabla["petroleo_m3_mes"] - tabla["petroleo_m3_no_convencional"]
+    tabla["dif_gas_miles_m3"] = tabla["gas_miles_m3_mes"] - tabla["gas_miles_m3_no_convencional"]
+    tabla["dif_pozos"] = tabla["pozos_con_registro"] - tabla["pozos_no_convencional"]
+    dias = pd.Series(tabla.index.days_in_month, index=tabla.index)
+    tabla["dif_petroleo_kbbl_d"] = tabla["dif_petroleo_m3"] * BARRILES_POR_M3 / dias / 1000
+    return tabla
+
+
+# ---------------------------------------------------------------------------------------------
+# 3. Archivo de pozos no convencionales y anuales completos (controles)
+# ---------------------------------------------------------------------------------------------
 def comparar_no_convencional_con_serie(pozos_nc: pd.DataFrame, petroleo: pd.DataFrame, gas: pd.DataFrame) -> pd.DataFrame:
     """Suma mensual del archivo no convencional por subtipo vs. la serie agregada, todos los meses.
     La SE cuenta como tight a los pozos no convencionales sin subtipo: se muestran las dos sumas."""
-    sub = pozos_nc["sub_tipo_recurso"].fillna("SIN_SUBTIPO")
+    sub = pozos_nc["sub_tipo_recurso"].astype("string").fillna("SIN_SUBTIPO")
     suma = pozos_nc.assign(sub=sub).pivot_table(index="fecha", columns="sub", values=["prod_pet", "prod_gas"],
                                                 aggfunc="sum").fillna(0)
     tabla = pd.DataFrame({
@@ -225,7 +444,7 @@ def anual_vs_serie(anual: pd.DataFrame, petroleo: pd.DataFrame, gas: pd.DataFram
 def verificar_corte(series: dict[str, pd.DataFrame], ultimo_mes_completo: pd.Timestamp) -> None:
     """Impide que un mes posterior al último mes completo de la fuente oficial entre a una serie.
     El último mes completo es el último mes de la serie agregada que publica la SE: los archivos
-    por pozo traen además meses parciales (por ejemplo, 10/2026 en el anual de 2026 del 18/11)."""
+    por pozo pueden traer además meses parciales."""
     for nombre, serie in series.items():
         if serie.index.max() > ultimo_mes_completo:
             raise ValueError(f"{nombre} llega a {serie.index.max():%m/%Y}, después del último mes completo de la "
@@ -236,8 +455,9 @@ def cobertura(pozos_nc: pd.DataFrame, anual: pd.DataFrame, anio: int, ultimo_mes
     """Cobertura del archivo no convencional vs. un archivo anual completo, por mes y solo hasta el
     último mes completo de la fuente oficial: pozo-mes NO CONVENCIONAL que están en uno y no en el
     otro (huecos) y volúmenes distintos (revisiones)."""
-    anual_nc = anual[(anual["tipo_de_recurso"] == "NO CONVENCIONAL") & (anual["fecha"] <= ultimo_mes_completo)]
-    nc = pozos_nc[pozos_nc["anio"] == anio]
+    columnas = ["idpozo", "fecha", "prod_pet", "prod_gas"]
+    anual_nc = anual.loc[(anual["tipo_de_recurso"] == "NO CONVENCIONAL") & (anual["fecha"] <= ultimo_mes_completo), columnas]
+    nc = pozos_nc.loc[(pozos_nc["anio"] == anio) & (pozos_nc["fecha"] <= ultimo_mes_completo), columnas]
     cruce = anual_nc.merge(nc, on=["idpozo", "fecha"], how="outer", suffixes=("_anual", "_nc"), indicator=True)
     cruce = cruce.fillna({c: 0 for c in ("prod_pet_anual", "prod_pet_nc", "prod_gas_anual", "prod_gas_nc")})
     cruce["pet_distinto"] = (cruce["_merge"] == "both") & ((cruce["prod_pet_anual"] - cruce["prod_pet_nc"]).abs() > 0.001)
@@ -254,34 +474,11 @@ def cobertura(pozos_nc: pd.DataFrame, anual: pd.DataFrame, anio: int, ultimo_mes
     return tabla
 
 
-def armar_vaca_muerta(pozos_nc: pd.DataFrame, comparacion: pd.DataFrame, ultimo_mes_completo: pd.Timestamp) -> pd.DataFrame:
-    """Vaca Muerta: formprod VMUT y tipo de recurso NO CONVENCIONAL, desde enero de 2010 hasta el
-    último mes completo de la fuente oficial. La columna control_cobertura marca los meses en que
-    la suma de shale del archivo no convencional no coincide con la serie agregada."""
-    vm = pozos_nc[(pozos_nc["formprod"] == "VMUT") & (pozos_nc["tipo_de_recurso"] == "NO CONVENCIONAL")]
-    vm = vm[(vm["fecha"] >= DESDE_VACA_MUERTA) & (vm["fecha"] <= ultimo_mes_completo)]
-    serie = vm.groupby("fecha").agg(petroleo_m3_mes=("prod_pet", "sum"), gas_miles_m3_mes=("prod_gas", "sum"),
-                                    pozos_con_registro=("idpozo", "nunique"))
-    serie = serie.reindex(pd.date_range(DESDE_VACA_MUERTA, min(pozos_nc["fecha"].max(), ultimo_mes_completo), freq="MS"))
-    serie.index.name = "fecha"
-    dias = pd.Series(serie.index.days_in_month, index=serie.index)
-    serie.insert(0, "dias_del_mes", dias)
-    serie["petroleo_m3_d"] = serie["petroleo_m3_mes"] / dias
-    serie["petroleo_kbbl_d"] = serie["petroleo_m3_mes"] * BARRILES_POR_M3 / dias / 1000
-    serie["gas_mm3_d"] = serie["gas_miles_m3_mes"] / dias / 1000
-    dif = comparacion.reindex(serie.index)["petroleo_shale_dif"]
-    serie["control_cobertura"] = ["OK" if abs(d) < 0.01 else
-                                  f"REVISAR: el archivo no convencional suma {d:,.1f} m3 de petróleo shale distinto de la serie agregada"
-                                  for d in dif]
-    columnas = ["dias_del_mes", "petroleo_m3_mes", "petroleo_m3_d", "petroleo_kbbl_d", "gas_miles_m3_mes",
-                "gas_mm3_d", "pozos_con_registro", "control_cobertura"]
-    return serie[columnas]
-
-
 # ---------------------------------------------------------------------------------------------
-# 2. Controles
+# 4. Controles
 # ---------------------------------------------------------------------------------------------
-def controles(petroleo, gas, nacional, comparacion, regla, coberturas, anuales_vs, anual_2026, series, ultimo_mes_completo) -> pd.DataFrame:
+def controles(petroleo, gas, nacional, comparacion, regla, coberturas, anuales_vs, anual_2026, series, ultimo_mes_completo,
+              verificacion, por_publicacion, reclasificados, vm_vs_nc, ddjj_resumen) -> pd.DataFrame:
     resultados = []
 
     def anotar(control, estado, detalle):
@@ -321,16 +518,16 @@ def controles(petroleo, gas, nacional, comparacion, regla, coberturas, anuales_v
     # Qué pozos quedan en el convencional (total - shale - tight): se mira en el archivo anual 2026,
     # en los meses en que coincide con la serie agregada (la serie viene redondeada: tolerancia 0,5).
     a = anual_2026[anual_2026["fecha"] <= petroleo.index.max()]
-    iguales = (a.groupby("fecha")["prod_pet"].sum() - petroleo["total"]).dropna().abs() < 0.5
+    iguales = (a.groupby("fecha")["prod_pet"].sum() - petroleo["total"]).dropna().abs() < TOLERANCIA_SERIE
     meses = iguales[iguales].index
     for producto, col_pozos, col_serie in (("petróleo", "prod_pet", "petroleo_convencional_m3_mes"),
                                            ("gas", "prod_gas", "gas_convencional_miles_m3_mes")):
         resto = a[(a["tipo_de_recurso"] != "NO CONVENCIONAL") & a["fecha"].isin(meses)]
         dif = (resto.groupby("fecha")[col_pozos].sum() - nacional.loc[meses, col_serie]).abs().max()
-        composicion = resto.groupby("tipo_de_recurso")[col_pozos].sum().round(1).to_dict()
+        composicion = resto.groupby("tipo_de_recurso", observed=True)[col_pozos].sum().round(1).to_dict()
         anotar(f"Convencional de la serie ({producto}) = pozos que no son NO CONVENCIONAL en el archivo anual 2026",
-               ok(dif < 0.5), f"{len(meses)} meses en que las dos versiones coinciden ({', '.join(meses.strftime('%m/%Y'))}); "
-                              f"diferencia máxima {dif:.3f}; composición por tipo de recurso: {composicion}")
+               ok(dif < TOLERANCIA_SERIE), f"{len(meses)} meses en que las dos versiones coinciden ({', '.join(meses.strftime('%m/%Y'))}); "
+                                           f"diferencia máxima {dif:.3f}; composición por tipo de recurso: {composicion}")
 
     # Total vs. suma de cuencas.
     cuencas_p = [c for c in petroleo.columns if c.startswith("cuenca_")]
@@ -341,6 +538,47 @@ def controles(petroleo, gas, nacional, comparacion, regla, coberturas, anuales_v
     anotar("Total = suma de las cinco cuencas", ok(max(dif_p.max(), dif_g.max()) < 0.01),
            f"petróleo: diferencia máxima {dif_p.max():.4f}% ({len(meses)} meses, {meses.min():%m/%Y} a {meses.max():%m/%Y}); "
            f"gas: {dif_g.max():.6f}%")
+
+    # Datos por pozo: DDJJ abiertas y cerradas con la clasificación vigente.
+    anotar("DDJJ abiertas y cerradas: sin pozo-mes repetidos (dentro de cada archivo y entre archivos)",
+           ok(ddjj_resumen["repetidos"] == 0),
+           f"{ddjj_resumen['pozo_mes']:,} pozo-mes de {ddjj_resumen['anios']}; repetidos {ddjj_resumen['repetidos']}; "
+           f"filas de otro año dentro de un DDJJ anual: {ddjj_resumen['filas_de_otro_anio']}")
+    multiples = por_publicacion[por_publicacion["clasificaciones_en_la_publicacion"] > 1]
+    anotar("Cada pozo tiene una sola clasificación dentro de cada publicación (la regla es por pozo)",
+           ok(multiples.empty), f"{por_publicacion['publicacion'].nunique()} publicaciones y versiones; "
+                                f"pozos con más de una clasificación en la misma publicación: {len(multiples)}")
+    fechas = por_publicacion.drop_duplicates("publicacion")["fecha_publicacion"]
+    anotar("Las publicaciones tienen fechas de publicación distintas (no hay empates para la regla)",
+           ok(not fechas.duplicated().any()), f"{len(fechas)} publicaciones")
+    for producto in ("petroleo", "gas"):
+        for agregado in ("total", "shale", "tight"):
+            d = verificacion[f"{producto}_{agregado}_dif"]
+            fuera = d[d.abs() > TOLERANCIA_SERIE]
+            anotar(f"DDJJ (clasificación vigente) vs. serie agregada: {producto} {agregado}, {len(d)} meses "
+                   f"({d.index.min():%m/%Y} a {d.index.max():%m/%Y})",
+                   "OK" if fuera.empty else "DIFERENCIAS",
+                   f"diferencia máxima {d.abs().max():.3f}" + ("" if fuera.empty else
+                   "; meses que no cierran: " + "; ".join(f"{f:%Y-%m}: {v:,.1f}" for f, v in fuera.items())))
+        for agregado in ("shale", "tight"):
+            d = verificacion[f"{producto}_{agregado}_dif_clasificacion_propia"]
+            fuera = d[d.abs() > TOLERANCIA_SERIE]
+            anotar(f"Evidencia: DDJJ con la clasificación propia de cada archivo vs. serie agregada: {producto} {agregado}",
+                   "EVIDENCIA", f"meses que no cierran: {len(fuera)}" + ("" if fuera.empty else
+                   " (" + "; ".join(f"{f:%Y-%m}: {v:,.1f}" for f, v in fuera.items()) + ")"))
+    anotar("Reclasificaciones entre publicaciones o versiones (lista en produccion_reclasificaciones.csv)", "EVIDENCIA",
+           f"{reclasificados['idpozo'].nunique()} pozos; cambian tipo o subtipo: "
+           f"{int((reclasificados['que_cambia'] != 'solo la formación').sum())}; cambian Vaca Muerta: "
+           f"{int(reclasificados['cambia_vaca_muerta'].sum())}; pozo-mes de los DDJJ que cambian: "
+           f"{int(reclasificados['pozo_mes_ddjj_que_cambian'].sum())}")
+    anotar("Regla por pozo = regla por pozo-mes (misma clasificación en todos los pozo-mes de los pozos reclasificados)",
+           ok(reclasificados["pozo_mes_distintos_si_la_regla_fuera_por_pozo_mes"].sum() == 0),
+           f"pozo-mes distintos: {int(reclasificados['pozo_mes_distintos_si_la_regla_fuera_por_pozo_mes'].sum())}")
+    distintos = vm_vs_nc[(vm_vs_nc["dif_petroleo_m3"].abs() > 0.001) | (vm_vs_nc["dif_gas_miles_m3"].abs() > 0.001)]
+    anotar("Vaca Muerta con los DDJJ vs. con el archivo no convencional (método anterior)", "EVIDENCIA",
+           f"{len(distintos)} meses distintos" + ("" if distintos.empty else ": " + "; ".join(
+               f"{f:%Y-%m} {r.dif_petroleo_m3:,.1f} m3 de petróleo y {r.dif_gas_miles_m3:,.1f} miles de m3 de gas"
+               for f, r in distintos.iterrows())))
 
     # Archivo no convencional vs. serie agregada.
     for producto in ("petroleo", "gas"):
@@ -381,7 +619,7 @@ def controles(petroleo, gas, nacional, comparacion, regla, coberturas, anuales_v
         partes = []
         for c, nombre in (("petroleo_total", "petróleo total"), ("petroleo_shale", "petróleo shale"),
                           ("petroleo_tight", "petróleo tight"), ("gas_total", "gas total"), ("gas_shale", "gas shale")):
-            con_dif = tabla[tabla[f"{c}_dif"].abs() > 0.5]  # la serie viene redondeada
+            con_dif = tabla[tabla[f"{c}_dif"].abs() > TOLERANCIA_SERIE]
             if len(con_dif):
                 partes.append(f"{nombre}: " + ", ".join(f"{f:%Y-%m} {v:,.1f}" for f, v in con_dif[f"{c}_dif"].items()))
         anotar(f"Archivo anual completo {anio} (todos los pozos) vs. serie agregada, por mes (total, shale y tight)",
@@ -395,11 +633,11 @@ def controles(petroleo, gas, nacional, comparacion, regla, coberturas, anuales_v
     return pd.DataFrame(resultados)
 
 
-def comparar_versiones_2026(petroleo, gas, anual_2026) -> pd.DataFrame:
-    """Serie agregada (versión del portal al FECHA_SERIE_AGREGADA) vs. archivo anual por pozo de 2026
+def comparar_versiones_2026(petroleo, gas, anual_2026, fecha_serie_agregada: str) -> pd.DataFrame:
+    """Serie agregada (versión publicada el fecha_serie_agregada) vs. archivo anual por pozo de 2026
     (más reciente), por mes, y lo cargado después de la serie agregada según fechaingreso."""
     a = anual_2026.copy()
-    a["cargado_despues"] = pd.to_datetime(a["fechaingreso"], errors="coerce") > pd.Timestamp(FECHA_SERIE_AGREGADA) + pd.Timedelta(days=1)
+    a["cargado_despues"] = pd.to_datetime(a["fechaingreso"], errors="coerce") > pd.Timestamp(fecha_serie_agregada[:10]) + pd.Timedelta(days=1)
     por_mes = a.groupby("fecha").agg(petroleo_m3_anual=("prod_pet", "sum"), gas_miles_m3_anual=("prod_gas", "sum"),
                                      filas=("idpozo", "size"))
     tarde = a[a["cargado_despues"]].groupby("fecha").agg(filas_cargadas_despues=("idpozo", "size"),
@@ -434,11 +672,11 @@ def contrastar_primera_difusion(nacional, vaca_muerta, versiones, sesco) -> pd.D
         vigente = tabla.loc[fecha, columna]
         fila = {"serie": serie, "mes": mes, "unidad": unidad, "primera_difusion": valor, "fuente_primera_difusion": fuente,
                 "dato_vigente": vigente, "revision_pct": 100 * (vigente / valor - 1),
-                "dato_vigente_de": "serie agregada de la SE" if serie != "petroleo_vaca_muerta" else "archivo no convencional por pozo"}
+                "dato_vigente_de": ("serie agregada de la SE" if serie != "petroleo_vaca_muerta" else
+                                    "DDJJ abiertas y cerradas por pozo, con la clasificación más reciente de la SE")}
         if serie in columna_2026 and fecha in versiones.index:
             fila["pozo_a_pozo_anual_2026"] = versiones.loc[fecha, columna_2026[serie]]
             fila["revision_pct_pozo_a_pozo"] = 100 * (fila["pozo_a_pozo_anual_2026"] / valor - 1)
-        dias = fecha.days_in_month
         if serie == "petroleo_total" and fecha in sesco.index and pd.notna(sesco.loc[fecha, "petroleo_produccion_petroleo_promedio_dia_m3"]):
             fila["sesco"] = sesco.loc[fecha, "petroleo_produccion_petroleo_promedio_dia_m3"] * BARRILES_POR_M3 / 1000
         if serie == "gas_total" and fecha in sesco.index:
@@ -452,45 +690,108 @@ def contrastar_primera_difusion(nacional, vaca_muerta, versiones, sesco) -> pd.D
 # ---------------------------------------------------------------------------------------------
 # Programa principal
 # ---------------------------------------------------------------------------------------------
+def leer_publicaciones_por_pozo(ultimo_mes_completo: pd.Timestamp, registros: list) -> tuple:
+    """Lee los DDJJ abiertas y cerradas (vigentes y versiones anteriores) y el archivo no convencional
+    (vigente y versiones anteriores). Devuelve: publicaciones (nombre -> (tabla compacta, fecha de
+    publicación)), los volúmenes de los DDJJ vigentes (cada uno con su año y hasta el último mes
+    completo), la tabla vigente del archivo no convencional y un resumen de los DDJJ."""
+    publicaciones, volumenes, filas_de_otro_anio = {}, [], 0
+
+    def agregar_versiones_anteriores(etiqueta, nombre_archivo, hash_vigente):
+        for version in se.versiones_pozos(nombre_archivo):
+            if version["sha256"] != hash_vigente:
+                compacta = compactar_publicacion(se.leer_pozos_version(version["ruta"]))
+                publicaciones[f"{etiqueta}, versión anterior {version['sha256'][:12]}"] = (compacta, version["fecha_publicacion"])
+
+    for anio, (nombre_archivo, _) in se.POZOS_ANUAL_DDJJ.items():
+        tabla, registro = se.descargar_pozos_anual_ddjj(anio)
+        registros.append(registro)
+        compacta = compactar_publicacion(tabla)
+        del tabla
+        publicaciones[f"DDJJ {anio}"] = (compacta, registro["fecha_publicacion"])
+        filas_de_otro_anio += int((compacta["anio"] != anio).sum())
+        volumenes.append(compacta.loc[(compacta["anio"] == anio) & (compacta["fecha"] <= ultimo_mes_completo),
+                                      ["idpozo", "fecha", "prod_pet", "prod_gas", "clave"]])
+        agregar_versiones_anteriores(f"DDJJ {anio}", nombre_archivo, registro["sha256"])
+        print(f"    DDJJ {anio}: {len(compacta):,} filas (publicado {registro['fecha_publicacion'][:10]})", flush=True)
+
+    pozos_nc, registro = se.descargar_pozos_no_convencional()
+    registros.append(registro)
+    publicaciones["No convencional"] = (compactar_publicacion(pozos_nc), registro["fecha_publicacion"])
+    agregar_versiones_anteriores("No convencional", se.POZOS_NO_CONVENCIONAL[0], registro["sha256"])
+
+    # Una sola tabla de volúmenes, con las claves como categoría común (los archivos traen categorías distintas).
+    categorias = sorted(set().union(*(set(v["clave"].cat.categories) for v in volumenes)))
+    volumenes = pd.concat([v.assign(clave=v["clave"].cat.set_categories(categorias)) for v in volumenes], ignore_index=True)
+    resumen = {"pozo_mes": len(volumenes), "anios": f"{min(se.POZOS_ANUAL_DDJJ)}-{max(se.POZOS_ANUAL_DDJJ)}",
+               "repetidos": int(volumenes.duplicated(["idpozo", "fecha"]).sum()), "filas_de_otro_anio": filas_de_otro_anio}
+    return publicaciones, volumenes, pozos_nc, resumen
+
+
 def main():
     sys.stdout.reconfigure(encoding="utf-8")
+    argumentos = argparse.ArgumentParser(description=__doc__.split("\n")[1])
+    argumentos.add_argument("--ok-descarga-grande", action="store_true",
+                            help="ok de Agustín para bajar más de 1 GB en esta corrida (regla 8 del instructivo)")
+    ok_descarga = argumentos.parse_args().ok_descarga_grande
     VALIDACION.mkdir(parents=True, exist_ok=True)
+
+    print("Revisión del portal (sin bajar nada)...")
+    revision = se.revisar_portal(se.archivos_produccion())
+    a_bajar = se.autorizar_descarga(revision, ok_mas_de_1gb=ok_descarga)  # frena si no responde o si pasa 1 GB sin ok
+    print(f"    cambiaron {len(a_bajar)} de {len(revision)} archivos ({a_bajar['bytes_a_bajar'].fillna(0).sum() / 1e9:.3f} GB)")
 
     print("Series agregadas de la SE...")
     agregadas, registros = se.descargar_series_agregadas()
     petroleo, gas = agregadas["petroleo"], agregadas["gas"]
-    print("Producción por pozo: no convencionales y anuales para controles...")
-    pozos_nc, registro = se.descargar_pozos_no_convencional()
-    registros.append(registro)
+    fecha_serie_agregada = registros[0]["fecha_publicacion"]
+    # Último mes completo de la fuente oficial: el último mes de la serie agregada de la SE.
+    ultimo_mes_completo = min(petroleo.index.max(), gas.index.max())
+
+    print("Producción por pozo: DDJJ abiertas y cerradas y archivo no convencional (con sus versiones)...")
+    publicaciones, volumenes, pozos_nc, ddjj_resumen = leer_publicaciones_por_pozo(ultimo_mes_completo, registros)
+    print("Anuales completos y SESCO (solo para controles)...")
     anuales = {}
     for anio in ANIOS_COBERTURA:
         anuales[anio], registro = se.descargar_pozos_anual(anio)
         registros.append(registro)
     anual_2026 = anuales[2026]
-    print("SESCO (solo para controles)...")
     sesco, regs = se.descargar_sesco_diaria()
     registros += regs
 
-    # Último mes completo de la fuente oficial: el último mes de la serie agregada de la SE.
-    ultimo_mes_completo = min(petroleo.index.max(), gas.index.max())
+    # Clasificación vigente de cada pozo y volúmenes de los DDJJ.
+    por_publicacion = pd.concat([clasificacion_por_publicacion(nombre, compacta, fecha)
+                                 for nombre, (compacta, fecha) in publicaciones.items()], ignore_index=True)
+    vigente = clasificacion_vigente(por_publicacion)
+    atributos = atributos_claves(por_publicacion["clave"])
+    clave_vigente = vigente["clave"].astype("category").reindex(volumenes["idpozo"]).reset_index(drop=True)
+    vigentes = sumas_mensuales(volumenes, clave_vigente, atributos)
+    propias = sumas_mensuales(volumenes, volumenes["clave"], atributos)
+    verificacion = ddjj_vs_serie(vigentes, propias, petroleo, gas)
+    reclasificados = reclasificaciones(por_publicacion, vigente, publicaciones, volumenes, atributos)
 
     nacional = armar_nacional(petroleo, gas)
+    vaca_muerta = armar_vaca_muerta(vigentes, verificacion, ultimo_mes_completo)
+    series = {"produccion_petroleo_gas_mensual": nacional, "produccion_vaca_muerta_mensual": vaca_muerta}
+    verificar_corte(series, ultimo_mes_completo)  # si una serie se pasa del último mes completo, frena acá
+    vm_vs_nc = vaca_muerta_vs_no_convencional(vaca_muerta, pozos_nc[pozos_nc["fecha"] <= ultimo_mes_completo])
+
     comparacion = comparar_no_convencional_con_serie(pozos_nc[pozos_nc["fecha"] <= ultimo_mes_completo], petroleo, gas)
     regla = evidencia_regla_sin_subtipo(comparacion)
     no_cierran = meses_que_no_cierran(comparacion)
     coberturas = {anio: cobertura(pozos_nc, anual, anio, ultimo_mes_completo) for anio, anual in anuales.items()}
     anuales_vs = {anio: anual_vs_serie(anual, petroleo, gas, anio, ultimo_mes_completo) for anio, anual in anuales.items()}
-    vaca_muerta = armar_vaca_muerta(pozos_nc, comparacion, ultimo_mes_completo)
-    series = {"produccion_petroleo_gas_mensual": nacional, "produccion_vaca_muerta_mensual": vaca_muerta}
-    verificar_corte(series, ultimo_mes_completo)  # si una serie se pasa del último mes completo, frena acá
-    versiones = comparar_versiones_2026(petroleo, gas, anual_2026)
+    versiones = comparar_versiones_2026(petroleo, gas, anual_2026, fecha_serie_agregada)
     tabla_controles = controles(petroleo, gas, nacional, comparacion, regla, coberturas, anuales_vs, anual_2026,
-                                series, ultimo_mes_completo)
+                                series, ultimo_mes_completo, verificacion, por_publicacion, reclasificados, vm_vs_nc, ddjj_resumen)
     difusion = contrastar_primera_difusion(nacional, vaca_muerta, versiones, sesco)
 
     nacional.to_csv(PROCESADOS / "produccion_petroleo_gas_mensual.csv", float_format="%.4f", date_format="%Y-%m-%d")
     vaca_muerta.to_csv(PROCESADOS / "produccion_vaca_muerta_mensual.csv", float_format="%.4f", date_format="%Y-%m-%d")
     tabla_controles.to_csv(VALIDACION / "produccion_controles.csv", index=False)
+    verificacion.to_csv(VALIDACION / "produccion_ddjj_vs_serie.csv", float_format="%.4f", date_format="%Y-%m-%d")
+    reclasificados.to_csv(VALIDACION / "produccion_reclasificaciones.csv", index=False, float_format="%.4f", date_format="%Y-%m-%d")
+    vm_vs_nc.to_csv(VALIDACION / "produccion_vaca_muerta_ddjj_vs_no_convencional.csv", float_format="%.4f", date_format="%Y-%m-%d")
     comparacion.to_csv(VALIDACION / "produccion_no_convencional_vs_serie.csv", float_format="%.3f", date_format="%Y-%m-%d")
     regla.to_csv(VALIDACION / "produccion_regla_sin_subtipo.csv", float_format="%.3f", date_format="%Y-%m-%d")
     no_cierran.to_csv(VALIDACION / "produccion_meses_que_no_cierran.csv", index=False, float_format="%.4f", date_format="%Y-%m-%d")
@@ -501,19 +802,12 @@ def main():
     guardar_registro(registros, VALIDACION / "descargas_produccion.csv")
 
     pd.set_option("display.width", 250)
-    pd.set_option("display.max_colwidth", 140)
+    pd.set_option("display.max_colwidth", 160)
     print(f"\nNacional: {nacional.index.min():%m/%Y} a {nacional.index.max():%m/%Y}. "
           f"Vaca Muerta: {vaca_muerta.index.min():%m/%Y} a {vaca_muerta.index.max():%m/%Y}")
     print("\nControles:\n" + tabla_controles.to_string(index=False))
-    print("\nMeses en que el archivo no convencional no reproduce la serie:\n"
-          + no_cierran.to_string(index=False, float_format=lambda v: f"{v:.3f}"))
-    for anio, tabla in coberturas.items():
-        con_dif = tabla[(tabla[["pozo_mes_solo_en_anual", "pozo_mes_solo_en_no_convencional", "pozo_mes_con_petroleo_distinto"]] > 0).any(axis=1)]
-        print(f"\nCobertura {anio}, meses con diferencias:\n" + (con_dif.round(1).to_string() if len(con_dif) else "ninguno"))
+    print("\nReclasificaciones:\n" + reclasificados.drop(columns=["primera_publicacion_con_la_anterior"]).to_string(index=False))
     print("\nPrimera difusión vs. dato vigente:\n" + difusion.drop(columns=["fuente_primera_difusion", "dato_vigente_de"]).round(2).to_string(index=False))
-    print("\nVersiones 2026 (serie agregada vs. archivo anual):\n" + versiones[
-        ["petroleo_kbbl_d_serie_agregada", "petroleo_kbbl_d_anual", "gas_mm3_d_serie_agregada", "gas_mm3_d_anual",
-         "filas_cargadas_despues", "petroleo_m3_cargado_despues"]].round(2).to_string())
 
 
 if __name__ == "__main__":
