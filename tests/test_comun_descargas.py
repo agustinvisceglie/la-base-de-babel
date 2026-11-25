@@ -123,6 +123,20 @@ class TestDescargaCondicional(BaseTemporal):
         self.assertEqual([p.name for p in crudos.iterdir() if p.is_file()], [])  # solo queda versiones/
         self.assertEqual(self.registro().iloc[0]["origen_fecha"], "encabezado Last-Modified")
 
+    def test_version_registrada_sin_fecha_se_baja_y_compara_el_hash(self):
+        """Los crudos registrados del 18/11 no tienen fecha de publicación anotada: ante una fuente
+        con Last-Modified se bajan y, si el contenido es el mismo, solo se anota la fecha."""
+        archivo = self.raiz / "datos" / "crudos" / "indec" / "prueba.xls"
+        archivo.parent.mkdir(parents=True)
+        archivo.write_bytes(self.contenido["actual"])
+        registro = d._registro(URL, archivo, pd.Timestamp("2026-11-18 10:57"), reusado=False)
+        d.guardar_version(registro, None, origen_fecha="no informada al bajar")
+        archivo.unlink()
+        resultado, bajar = self.correr({"fecha_publicacion": "2026-11-19T18:51:19+00:00", "etag": '"abc"', "bytes": 18})
+        self.assertEqual(bajar.call_count, 1)
+        self.assertFalse(resultado["version_nueva"])
+        self.assertEqual(list(self.registro()["fecha_publicacion"].fillna("")), ["", "2026-11-19T18:51:19+00:00"])
+
     def test_mismo_last_modified_no_baja(self):
         metadatos = {"fecha_publicacion": "2026-11-19T18:51:19+00:00", "etag": '"abc"', "bytes": 18}
         self.correr(metadatos)

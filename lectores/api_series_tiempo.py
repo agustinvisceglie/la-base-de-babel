@@ -9,7 +9,10 @@ Qué hace:
 
 Fuente: https://apis.datos.gob.ar/series/api/series/ (documentación: https://datosgobar.github.io/series-tiempo-ar-api/)
     Para buscar IDs: https://apis.datos.gob.ar/series/api/search/?q=<palabras>
-Genera: datos/crudos/api_series_tiempo/<nombre>.csv y <nombre>_metadatos.json
+Genera: las versiones de cada respuesta en datos/crudos/api_series_tiempo/versiones/ (comprimidas,
+    con su registro en datos/registros/versiones_crudos.csv). La API no informa fecha de publicación
+    ni ETag: por la regla 8 del instructivo, como cada respuesta pesa menos de 50 MB, se baja y se
+    compara el hash con la última versión (comun/descargas.py).
 """
 
 from __future__ import annotations
@@ -19,7 +22,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from scripts.descargas import CRUDOS, RAIZ, descargar
+from comun.descargas import CRUDOS, RAIZ, descargar_condicional, leer_bytes
 
 URL_SERIES = "https://apis.datos.gob.ar/series/api/series/"
 CARPETA = CRUDOS / "api_series_tiempo"
@@ -35,9 +38,9 @@ def descargar_series(ids: list[str], nombre: str, desde: str) -> tuple[pd.DataFr
     # limit=5000: máximo de filas que permite la API (alcanza para series mensuales desde 1900).
     url = (f"{URL_SERIES}?ids={','.join(ids)}&start_date={desde}"
            f"&limit=5000&format=csv&header=ids")
-    registro = descargar(url, CARPETA / f"{nombre}.csv")
+    registro = descargar_condicional(url, "api_series_tiempo", f"{nombre}.csv")
 
-    tabla = pd.read_csv(RAIZ / registro["archivo"], parse_dates=["indice_tiempo"])
+    tabla = pd.read_csv(RAIZ / registro["version"], parse_dates=["indice_tiempo"])
     tabla = tabla.rename(columns={"indice_tiempo": "fecha"}).set_index("fecha")
 
     faltantes = set(ids) - set(tabla.columns)
@@ -51,9 +54,9 @@ def descargar_metadatos(ids: list[str], nombre: str) -> tuple[pd.DataFrame, list
     filas, registros = [], []
     for id_serie in ids:
         url = f"{URL_SERIES}?ids={id_serie}&metadata=only"
-        destino = CARPETA / f"{nombre}_metadatos_{id_serie}.json"
-        registros.append(descargar(url, destino))
-        meta = json.loads(Path(destino).read_text(encoding="utf-8"))["meta"]
+        registro = descargar_condicional(url, "api_series_tiempo", f"{nombre}_metadatos_{id_serie}.json")
+        registros.append(registro)
+        meta = json.loads(leer_bytes(registro["version"]).read().decode("utf-8"))["meta"]
         # meta[0] = frecuencia de la consulta; meta[1] = catálogo, dataset, distribución y serie
         info = meta[1]
         filas.append({

@@ -164,11 +164,12 @@ class TestActualizar(unittest.TestCase):
         self.assertTrue((self.raiz / "datos" / "series" / "sector_externo" / "comex.csv").exists())
 
     def test_nunca_commitea(self):
+        """Ni actualizar.py ni comun/ escriben en git (leer, por ejemplo con git show, sí se puede)."""
         for ruta in [RAIZ / "actualizar.py", *sorted((RAIZ / "comun").glob("*.py"))]:
             texto = ruta.read_text(encoding="utf-8")
-            self.assertNotIn("subprocess", texto, ruta.name)
-            self.assertNotIn("git commit", texto, ruta.name)
-            self.assertNotIn("git push", texto, ruta.name)
+            for orden in ("commit", "push", "add", "reset", "checkout", "rebase", "merge", "tag"):
+                self.assertNotIn(f'"git", "{orden}"', texto, f"{ruta.name}: git {orden}")
+                self.assertNotIn(f"git {orden} ", texto, f"{ruta.name}: git {orden}")
 
 
 if __name__ == "__main__":

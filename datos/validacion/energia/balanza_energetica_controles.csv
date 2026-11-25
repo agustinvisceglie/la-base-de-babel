@@ -1,0 +1,5 @@
+control,estado,detalle,alcance
+Saldo energético mensual sin meses faltantes,OK,01/2004 a 09/2026,
+"Saldo CyE - CyL publicado por terceros = primera publicación del INDEC (-4.470, 5.668, 7.815, 7.834)",OK,2022: -4470.0 vs -4470; 2024: 5667.8 vs 5668; 2025: 7815.1 vs 7815; 2026 ene-ago: 7834.5 vs 7834,
+Primera publicación vs. dato vigente del saldo CyE - CyL (revisiones del INDEC),EVIDENCIA,2022 primera publicación: +83.6; 2022 revisada un año después: -27.4; 2023 primera publicación: +87.0; 2023 revisada un año después: +54.4; 2024 primera publicación: +62.2; 2024 revisada un año después: +0.0; 2025 primera publicación: +14.0,
+Las series que devuelve el armador son las que declara (SERIES y AUXILIARES),OK,,

@@ -295,9 +295,13 @@ def _ultima_fila(logico: str) -> pd.Series | None:
 
 
 def _misma_publicacion(fila: pd.Series, metadatos: dict) -> bool:
+    """¿La última versión registrada es la que publica hoy la fuente? Si la versión registrada no
+    tiene fecha (o ETag) anotada, no se puede saber: se toma como distinta (se baja y se compara el hash)."""
     if metadatos["fecha_publicacion"]:
-        return fila["fecha_publicacion"] == metadatos["fecha_publicacion"]
-    return bool(metadatos["etag"]) and fila["etag"] == metadatos["etag"]
+        registrada = fila["fecha_publicacion"]
+        return pd.notna(registrada) and str(registrada) == metadatos["fecha_publicacion"]
+    registrada = fila["etag"]
+    return bool(metadatos["etag"]) and pd.notna(registrada) and str(registrada) == metadatos["etag"]
 
 
 def descargar_condicional(url: str, organismo: str, nombre: str, recurso: str | None = None) -> dict:

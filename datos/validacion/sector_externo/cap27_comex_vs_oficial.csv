@@ -1,0 +1,9 @@
+periodo,meses_en_base,expo_comex_musd,expo_oficial_musd,impo_comex_musd,impo_oficial_musd,referencia_oficial,dif_expo_musd,dif_expo_pct,dif_impo_musd
+2006,12,7110.6,7110.6,1604.3,1604.3,Suma de los 12 meses de la API (no hay cuadro anual por capítulo),0.0,0.0,0.0
+2015,12,1442.0,1442.0,6581.6,6582.0,"INDEC, exp_ncm_15_19.xls y imp_ncm_15_19.xls",-0.0,-0.0,-0.4
+2018,12,2454.0,3171.0,6297.3,6297.0,"INDEC, exp_ncm_18_22.xls y imp_ncm_18_22.xls",-717.0,-22.6,0.3
+2020,12,2107.8,2712.2,2566.1,2566.1,"INDEC, exp_ncm_20_24.xls y imp_ncm_20_24.xls",-604.4,-22.3,-0.0
+2022,12,6514.0,7044.7,12920.5,12920.5,"INDEC, exp_ncm_21_25.xls y imp_ncm_21_25.xls",-530.7,-7.5,0.0
+2024,12,7834.7,8239.2,3777.8,3777.8,"INDEC, exp_ncm_21_25.xls y imp_ncm_21_25.xls",-404.5,-4.9,-0.0
+2025,12,9261.1,9717.8,3042.5,3042.5,"INDEC, exp_ncm_21_25.xls y imp_ncm_21_25.xls",-456.7,-4.7,0.0
+2026 ene-sep,9,10314.3,10786.9,2787.2,2787.2,Acumulado oficial del último informe (ICA del 19/10/2026),-472.5,-4.4,0.0

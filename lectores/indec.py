@@ -8,8 +8,8 @@ Qué hace:
     - leer_ica_mensual(): lee los cuadros mensuales del Intercambio comercial argentino (ICA)
       por grandes rubros (exportaciones) o por usos económicos (importaciones). Cada archivo
       trae dos años: el corriente y el anterior.
-    - leer_ica_anual(): lee los cuadros anuales históricos por rubro o uso (desde 1980),
-      que vienen en miles de USD, y los pasa a millones de USD.
+    - leer_ica_anual(): lee los cuadros anuales históricos por rubro o uso (desde 1980), en miles
+      de USD, tal como vienen (la conversión a millones la hace el armador).
     - listar_informes_ica(): lee el listado oficial de informes técnicos del ICA y devuelve,
       para cada uno, la fecha de publicación y las URL del PDF, del Excel de cuadros y de la
       versión interactiva.
@@ -25,11 +25,17 @@ Qué hace:
     - leer_capitulo_anual(): lee un cuadro anual por capítulos de la NCM (exp_ncm_AA_AA.xls,
       imp_ncm_AA_AA.xls) y devuelve la fila del capítulo 27.
     - leer_rubros_usos_mensual(): lee la serie mensual por grandes rubros y usos económicos de
-      la versión interactiva del informe (serie_rubros_usos_mensual.xlsx, desde 2004).
+      la versión interactiva del informe (serie_rubros_usos_mensual.xlsx, desde 2004), en formato
+      largo y en USD, tal como viene (elegir rubros, convertir y sumar lo hace el armador).
+    Lector (sin criterios económicos): baja con descarga condicional (comun/descargas.py: solo si
+    cambió el Last-Modified o el ETag; las páginas sin fecha, si pesan menos de 50 MB, se bajan y
+    se comparan por hash) y lee siempre la versión guardada (.gz). Los cuadros vienen en millones
+    de USD y se devuelven así.
 
 Fuente: INDEC, página "Intercambio comercial argentino" (https://www.indec.gob.ar/indec/web/Nivel4-Tema-3-2-40),
     listado de informes técnicos del ICA y versión interactiva de cada informe.
-Genera: los archivos originales en datos/crudos/indec/ (no se modifican).
+Genera: las versiones de cada archivo en datos/crudos/indec/versiones/ (comprimidas, con su
+    registro en datos/registros/versiones_crudos.csv).
 """
 
 from __future__ import annotations
@@ -40,7 +46,7 @@ from pathlib import Path
 import pandas as pd
 import xlrd
 
-from scripts.descargas import CRUDOS, RAIZ, descargar
+from comun.descargas import CRUDOS, RAIZ, descargar_condicional, leer_bytes
 
 URL_INDEC = "https://www.indec.gob.ar"
 # La página visible (Nivel4-Tema-3-2-40) carga su contenido desde esta dirección:
@@ -50,13 +56,32 @@ CARPETA = CRUDOS / "indec"
 MESES_ABREV = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
 
 
+def nombre_local(url: str) -> str:
+    """Nombre del crudo en datos/crudos/indec/. Los archivos de la versión interactiva de cada
+    informe se llaman igual en todos los informes (por ejemplo, serie_rubros_usos_mensual.xlsx):
+    llevan delante el código de la carpeta del informe (ica_d_MM_AA<código>)."""
+    if "/ftp/ica_digital/" in url:
+        codigo = url.split("/ftp/ica_digital/")[1].split("/")[0]
+        return f"{codigo}__{Path(url).name}"
+    return Path(url).name
+
+
+def _libro(ruta: Path) -> xlrd.book.Book:
+    """Abre un .xls desde la versión guardada (comprimida o no)."""
+    return xlrd.open_workbook(file_contents=leer_bytes(ruta).read())
+
+
+def _html(registro: dict) -> str:
+    return leer_bytes(registro["version"]).read().decode("utf-8", errors="replace")
+
+
 def buscar_archivos(pagina: str, prefijos: list[str], nombre_html: str) -> tuple[dict[str, str], list[dict]]:
     """Devuelve {prefijo: url_completa} con el archivo vigente para cada prefijo.
 
     Si un prefijo aparece en más de un archivo, falla: preferimos que lo revise una persona.
     """
-    registro = descargar(pagina, CARPETA / nombre_html)
-    html = (RAIZ / registro["archivo"]).read_text(encoding="utf-8", errors="replace")
+    registro = descargar_condicional(pagina, "indec", nombre_html)
+    html = _html(registro)
     enlaces = re.findall(r'href="([^"]+\.xlsx?)"', html, flags=re.IGNORECASE)
 
     encontrados = {}
@@ -70,10 +95,10 @@ def buscar_archivos(pagina: str, prefijos: list[str], nombre_html: str) -> tuple
 
 
 def descargar_archivo(url: str) -> tuple[Path, dict]:
-    """Baja un cuadro del INDEC a datos/crudos/indec/ con su nombre original."""
-    destino = CARPETA / Path(url).name
-    registro = descargar(url, destino)
-    return destino, registro
+    """Baja (si cambió) un archivo del INDEC y devuelve (ruta de la versión guardada, registro).
+    El nombre original del archivo es Path(registro["archivo"]).name."""
+    registro = descargar_condicional(url, "indec", nombre_local(url))
+    return RAIZ / registro["version"], registro
 
 
 def _texto(valor) -> str:
@@ -88,7 +113,7 @@ def leer_ica_mensual(ruta: Path, etiqueta_rubro: str) -> pd.DataFrame:
     Devuelve una tabla mensual (índice = primer día del mes) con las columnas
     `total` y `rubro`, en millones de USD.
     """
-    hoja = xlrd.open_workbook(ruta).sheet_by_index(0)
+    hoja = _libro(ruta).sheet_by_index(0)
 
     # 1) Fila de encabezados de rubros: la que contiene la etiqueta buscada.
     fila_rubros = next(r for r in range(hoja.nrows)
@@ -130,10 +155,10 @@ def leer_ica_anual(ruta: Path, etiqueta_rubro: str) -> pd.DataFrame:
 
     El archivo está armado en bloques de nueve años, uno debajo del otro; los años
     provisorios vienen marcados con asterisco ("2025*") y los estimados con "e". Devuelve una
-    tabla anual (índice = año) con `total` y `rubro` en millones de USD y la marca `provisorio`
-    (True si el año tiene cualquiera de las dos marcas).
+    tabla anual (índice = año) con `total` y `rubro` en MILES de USD, como vienen, y la marca
+    `provisorio` (True si el año tiene cualquiera de las dos marcas).
     """
-    hoja = xlrd.open_workbook(ruta).sheet_by_index(0)
+    hoja = _libro(ruta).sheet_by_index(0)
     patron_anio = re.compile(r"^(\d{4})(\.0)?([*e]?)$")  # "2025*" = provisorio, "2014e" = estimado
 
     datos: dict[int, dict] = {}
@@ -162,7 +187,7 @@ def leer_ica_anual(ruta: Path, etiqueta_rubro: str) -> pd.DataFrame:
                 anio, provisorio = anio_info  # True si tiene marca * o e
                 if clave in datos.get(anio, {}):
                     raise ValueError(f"{ruta.name}: el año {anio} aparece dos veces")
-                datos.setdefault(anio, {})[clave] = valor / 1000  # miles -> millones de USD
+                datos.setdefault(anio, {})[clave] = valor  # miles de USD, como vienen
                 datos[anio]["provisorio"] = provisorio
 
     return pd.DataFrame.from_dict(datos, orient="index").sort_index()
@@ -185,8 +210,8 @@ def listar_informes_ica(nombre_html: str) -> tuple[pd.DataFrame, list[dict]]:
     El Excel de cuadros se llama ica_cuadros_DD_MM_AA.xls (fecha de publicación) y la versión
     interactiva usa el mismo código que el PDF (ica_MM_AA<código>.pdf -> ica_d_MM_AA<código>/).
     """
-    registro = descargar(PAGINA_INFORMES_ICA, CARPETA / nombre_html)
-    html = (RAIZ / registro["archivo"]).read_text(encoding="utf-8", errors="replace")
+    registro = descargar_condicional(PAGINA_INFORMES_ICA, "indec", nombre_html)
+    html = _html(registro)
 
     filas, inicio_bloque = [], 0
     for enlace in re.finditer(r"ica_(\d{2})_(\d{2})([0-9A-F]+)\.pdf", html):
@@ -229,7 +254,7 @@ def leer_cuadro_capitulo27(ruta: Path) -> dict:
         acumulado: {"hasta_mes", "actual", "anterior"} con los acumulados del año en curso y
             del anterior (en los informes de enero, el acumulado es el mismo mes).
     """
-    hoja = _hoja_por_titulo(xlrd.open_workbook(ruta), "capítulo 27")
+    hoja = _hoja_por_titulo(_libro(ruta), "capítulo 27")
     fila_periodo = next(r for r in range(hoja.nrows) if _texto(hoja.cell_value(r, 0)).startswith("Principales"))
     mes_nombre = _texto(hoja.cell_value(fila_periodo, 2)).lower()
     anio_actual = int(re.search(r"\d{4}", _texto(hoja.cell_value(fila_periodo + 1, 2))).group())
@@ -276,7 +301,7 @@ def leer_cuadro1_acumulado(ruta: Path) -> dict:
     por suma pueden no coincidir por redondeo" (nota del cuadro); una fila equivocada difiere en miles.
     Devuelve {"mes", "actual": {"expo", "impo", "saldo"}, "anterior": {...}} en millones de USD.
     """
-    hoja = _hoja_por_titulo(xlrd.open_workbook(ruta), "Cuadro 1.")
+    hoja = _hoja_por_titulo(_libro(ruta), "Cuadro 1.")
     etiquetas = [_texto(hoja.cell_value(r, 1)) for r in range(hoja.nrows)]
     filas_mes = {MESES_NOMBRE.index(e.lower()) + 1: r for r, e in enumerate(etiquetas) if e.lower() in MESES_NOMBRE}
     meses_con_dato = sorted(m for m, r in filas_mes.items() if isinstance(hoja.cell_value(r, 2), float))
@@ -358,8 +383,8 @@ def leer_cuadro_rubros_usos(ruta: Path) -> dict:
     cada uno con expo_total, expo_cye, impo_total e impo_cyl en millones de USD ("hojas" dice de
     qué hoja del Excel sale cada flujo).
     """
-    libro = xlrd.open_workbook(ruta)
-    expo = _hoja_por_patron(libro, r"^Cuadro \d+\. Exportaciones por (grandes|principales) rubros(\.| y principales subrubros)")
+    libro = _libro(ruta)
+    expo = _hoja_por_patron(libro,r"^Cuadro \d+\. Exportaciones por (grandes|principales) rubros(\.| y principales subrubros)")
     impo = _hoja_por_patron(libro, r"^Cuadro \d+\. - Importaciones, según usos económicos")
 
     def fila(hoja, columna, prefijo):
@@ -390,7 +415,7 @@ def leer_capitulo_anual(ruta: Path) -> dict[str, dict[int, float]]:
     devuelve también el total, para que quien lo use lo compare con el total anual oficial
     (si coinciden, la unidad es la correcta).
     """
-    hoja = xlrd.open_workbook(ruta).sheet_by_index(0)
+    hoja = _libro(ruta).sheet_by_index(0)
     patron_anio = re.compile(r"^(\d{4})(\.0)?[*e]?$")  # "2024*" = provisorio, "2014e" = estimado
 
     anios, resultado = None, {}
@@ -413,23 +438,9 @@ def leer_capitulo_anual(ruta: Path) -> dict[str, dict[int, float]]:
 def leer_rubros_usos_mensual(ruta: Path) -> pd.DataFrame:
     """Lee serie_rubros_usos_mensual.xlsx (versión interactiva del informe, desde 2004).
 
-    Viene en formato largo (año, mes, comercio, rubro_uso, valor en USD). Devuelve una tabla
-    mensual en millones de USD con expo_total_musd, expo_cye_musd, impo_total_musd e
-    impo_cyl_musd. Los totales son la suma de todos los rubros o usos (incluido "Resto").
+    Viene en formato largo (año, mes, comercio, rubro_uso, valor en USD) y se devuelve así, con una
+    columna `fecha` (primer día del mes). Elegir rubros, convertir y sumar lo hace el armador.
     """
-    largo = pd.read_excel(ruta, dtype={"año": int, "mes": int})
+    largo = pd.read_excel(leer_bytes(ruta), dtype={"año": int, "mes": int})
     largo["fecha"] = pd.to_datetime(dict(year=largo["año"], month=largo["mes"], day=1))
-    largo["valor"] = largo["valor"] / 1e6  # USD -> millones de USD
-
-    expo = largo[largo["comercio"] == "Exportaciones"]
-    impo = largo[largo["comercio"] == "Importaciones"]
-    es_cye = expo["rubro_uso"].str.startswith("Combustibles y energía")
-    es_cyl = impo["rubro_uso"].str.startswith("Combustibles y lubricantes")
-    tabla = pd.DataFrame({
-        "expo_total_musd": expo.groupby("fecha")["valor"].sum(),
-        "expo_cye_musd": expo[es_cye].groupby("fecha")["valor"].sum(),
-        "impo_total_musd": impo.groupby("fecha")["valor"].sum(),
-        "impo_cyl_musd": impo[es_cyl].groupby("fecha")["valor"].sum(),
-    })
-    tabla.index.name = "fecha"
-    return tabla
+    return largo

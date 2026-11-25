@@ -80,7 +80,10 @@ def _escribir(armador: catalogo.Armador, resultado: dict, tabla_controles: pd.Da
     carpeta.mkdir(parents=True, exist_ok=True)
     tabla_controles.to_csv(carpeta / f"{armador.nombre}_controles.csv", index=False)
     for nombre, contenido in resultado.get("validacion", {}).items():
-        if isinstance(contenido, pd.DataFrame):
+        if isinstance(contenido, tuple):  # (tabla, opciones de to_csv: index, float_format...)
+            tabla, opciones = contenido
+            tabla.to_csv(carpeta / nombre, **{"date_format": "%Y-%m-%d", **opciones})
+        elif isinstance(contenido, pd.DataFrame):
             contenido.to_csv(carpeta / nombre, date_format="%Y-%m-%d")
         else:
             (carpeta / nombre).write_text(str(contenido), encoding="utf-8")
@@ -105,6 +108,7 @@ def ejecutar(argv=None, lista: list[catalogo.Armador] | None = None, raiz: Path 
     inicio = datetime.now()
     reloj = time.time()
     lista = catalogo.armadores(raiz) if lista is None else lista
+    catalogo.usar_raiz(raiz)  # los armadores leen las series de otros bloques de esta raíz
     if args.listar:
         listar(lista)
         return 0

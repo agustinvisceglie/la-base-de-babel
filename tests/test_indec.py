@@ -1,12 +1,13 @@
 """
-Tests de los lectores de cuadros del INDEC (scripts/indec.py).
+Tests de los lectores de cuadros del INDEC (lectores/indec.py).
 
 Qué hace: lee el cuadro 1 (acumulado del año) del Excel de cuadros de informes técnicos del ICA
     de distintos meses y lo compara con lo publicado en el PDF de cada informe. Cubre los meses en
     que la fila del acumulado se llama distinto: diciembre ("Total anual") y febrero ("Total
     bimestre"; "Primer bimestre" en el PDF), más un mes común (septiembre, "Acumulado hasta...").
 Fuentes: Excel de cuadros del ICA (www.indec.gob.ar/ftp/cuadros/economia/ica_cuadros_DD_MM_AA.xls;
-    se bajan a datos/crudos/indec/ si no están) y los valores del cuadro 1 del PDF de cada informe,
+    se usa la versión guardada en datos/crudos/indec/versiones/; si no hay, se baja con la descarga
+    condicional) y los valores del cuadro 1 del PDF de cada informe,
     copiados abajo con la página. Los PDF redondean a millones: la tolerancia es 1.
 Genera: nada (solo dice si los tests pasan).
 
@@ -19,12 +20,12 @@ import unittest
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(RAIZ))  # para poder importar scripts/
+sys.path.insert(0, str(RAIZ))  # para poder importar lectores/ y comun/
 
 import pandas as pd
 
-from scripts import indec
-from scripts.descargas import descargar
+from comun import descargas
+from lectores import indec
 
 TOLERANCIA_MUSD = 1.0
 
@@ -55,10 +56,11 @@ CASOS_CUADRO1 = [
 
 
 def ruta_cuadros(archivo: str) -> Path:
-    """Devuelve la ruta local del Excel de cuadros; si no está, lo baja del INDEC."""
-    destino = indec.CARPETA / archivo
-    descargar(f"{indec.URL_INDEC}/ftp/cuadros/economia/{archivo}", destino, reusar_si_existe=True)
-    return destino
+    """Devuelve la versión guardada del Excel de cuadros; si no hay ninguna, lo baja del INDEC."""
+    try:
+        return descargas.RAIZ / descargas.version_registrada(f"datos/crudos/indec/{archivo}")["version"]
+    except descargas.DescargaFrenada:
+        return indec.descargar_archivo(f"{indec.URL_INDEC}/ftp/cuadros/economia/{archivo}")[0]
 
 
 class TestLeerCuadro1Acumulado(unittest.TestCase):

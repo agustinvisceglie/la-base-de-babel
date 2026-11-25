@@ -1,5 +1,7 @@
 # Informe de validación: "La vuelta del gas"
 
+> **Histórico (estado al 18/11/2026).** Desde el Paso 3b (25/11/2026) las series, sus controles y su validación están en la base: `datos/series/sector_externo/`, `datos/series/energia/` y `datos/validacion/sector_externo/informe_validacion.md`. Las rutas `datos/procesados/` de este informe ya no existen (los archivos se mudaron a `datos/series/sector_externo/`). Este informe queda como registro de la nota, que está en pausa (ver README).
+
 Nota de la sección **El Pozo y el Péndulo** (diciembre de 2026).
 
 **Pregunta de la nota:** ¿cuánto del saldo comercial de bienes de la Argentina explica hoy la energía, y cuánto de eso es estructural (más producción, Vaca Muerta) y cuánto coyuntural (precios internacionales)?

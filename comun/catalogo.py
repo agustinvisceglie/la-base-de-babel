@@ -162,6 +162,23 @@ def ruta_serie(bloque: str, archivo: str, raiz: Path = RAIZ) -> Path:
     return Path(raiz) / "datos" / "series" / bloque / archivo
 
 
+# Raíz de la corrida (la fija actualizar.py): de ahí leen los armadores las series de otros bloques.
+_RAIZ_DE_LA_CORRIDA = {"raiz": RAIZ}
+
+
+def usar_raiz(raiz: Path) -> None:
+    _RAIZ_DE_LA_CORRIDA["raiz"] = Path(raiz)
+
+
+def leer_serie(bloque: str, archivo: str, indice_fecha: bool = True) -> pd.DataFrame:
+    """Lee un CSV de datos/series/<bloque>/ (de la raíz de la corrida), con la primera columna como
+    índice (convertida a fecha si `indice_fecha`). Es como un armador usa las series de otro bloque."""
+    tabla = pd.read_csv(ruta_serie(bloque, archivo, _RAIZ_DE_LA_CORRIDA["raiz"]), index_col=0)
+    if indice_fecha:
+        tabla.index = pd.to_datetime(tabla.index)
+    return tabla
+
+
 def leer_catalogo(raiz: Path = RAIZ) -> pd.DataFrame:
     ruta = Path(raiz) / "catalogo_series.csv"
     if not ruta.exists():
