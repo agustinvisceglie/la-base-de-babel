@@ -1,131 +1,14 @@
 """
-Descargas genéricas de archivos públicos, con registro de trazabilidad.
+Descargas genéricas (compatibilidad): desde el Paso 3a todo esto vive en comun/descargas.py.
 
-Qué hace:
-    - descargar(): baja un archivo de una URL y lo guarda tal cual en datos/crudos/.
-      Devuelve un registro con la URL, la ruta local, la fecha y hora de descarga,
-      el tamaño y el hash SHA-256 (sirve para saber si el archivo cambió entre corridas).
-    - guardar_registro(): escribe en un CSV la lista de descargas de una corrida.
-    - guardar_version(): guarda una copia de un archivo descargado en la carpeta versiones/, con
-      la fecha de publicación y el hash en el nombre, si esa versión todavía no estaba guardada.
-      Nunca pisa una versión anterior. Anota cada versión nueva en datos/validacion/versiones_crudos.csv
-      (que se sube a GitHub: así queda qué versión de cada fuente existía en cada momento).
-
-Fuentes: cualquiera. Lo usan los módulos por fuente (api_series_tiempo.py, indec.py, etc.).
-Genera: los archivos descargados (en datos/crudos/, que no se sube a GitHub), sus versiones
-    (en datos/crudos/<fuente>/versiones/) y los CSV de registro.
+Qué hace: reexporta las funciones y constantes de comun/descargas.py con los mismos nombres, para que
+    el código de scripts/ y series/ siga funcionando sin cambios hasta que se migre a lectores/ y
+    bloques/ (Pasos 3b y 3c). Así hay una sola implementación que escribe el registro de versiones
+    (datos/registros/versiones_crudos.csv) y una sola forma de guardar versiones (comprimidas, .gz,
+    con el hash del original).
+Fuentes: cualquiera.
+Genera: lo mismo que comun/descargas.py.
 """
 
-from __future__ import annotations
-
-import hashlib
-import shutil
-from datetime import datetime
-from pathlib import Path
-from zoneinfo import ZoneInfo
-
-import pandas as pd
-import requests
-
-# Carpetas del repositorio (este archivo está en <raiz>/scripts/)
-RAIZ = Path(__file__).resolve().parents[1]
-CRUDOS = RAIZ / "datos" / "crudos"
-PROCESADOS = RAIZ / "datos" / "procesados"
-REGISTRO_VERSIONES = RAIZ / "datos" / "validacion" / "versiones_crudos.csv"
-
-# Encabezado genérico: algunos sitios rechazan pedidos sin "User-Agent".
-ENCABEZADOS = {"User-Agent": "Mozilla/5.0 (compatible; descarga-datos-publicos/1.0)"}
-ZONA_HORARIA = ZoneInfo("America/Argentina/Buenos_Aires")
-
-
-def descargar(url: str, destino: Path, reusar_si_existe: bool = False,
-              intentos: int = 3, timeout: int = 120) -> dict:
-    """Baja `url` a `destino` y devuelve un registro de la descarga.
-
-    - Escribe por partes (streaming), así funciona también con archivos grandes.
-    - Si `reusar_si_existe` es True y el archivo ya está, no lo vuelve a bajar
-      (útil mientras se desarrolla); en el registro queda la fecha del archivo local.
-    """
-    destino = Path(destino)
-    destino.parent.mkdir(parents=True, exist_ok=True)
-
-    if reusar_si_existe and destino.exists():
-        fecha = datetime.fromtimestamp(destino.stat().st_mtime, ZONA_HORARIA)
-        return _registro(url, destino, fecha, reusado=True)
-
-    ultimo_error = None
-    for intento in range(1, intentos + 1):
-        try:
-            with requests.get(url, headers=ENCABEZADOS, timeout=timeout, stream=True) as respuesta:
-                respuesta.raise_for_status()
-                temporal = destino.with_suffix(destino.suffix + ".parcial")
-                with open(temporal, "wb") as archivo:
-                    for bloque in respuesta.iter_content(chunk_size=1024 * 1024):
-                        archivo.write(bloque)
-                temporal.replace(destino)  # recién al terminar reemplaza al archivo anterior
-            return _registro(url, destino, datetime.now(ZONA_HORARIA), reusado=False)
-        except requests.RequestException as error:
-            ultimo_error = error
-            print(f"    intento {intento} de {intentos} fallido para {url}: {error}")
-
-    raise RuntimeError(f"No se pudo descargar {url}. Último error: {ultimo_error}")
-
-
-def _registro(url: str, destino: Path, fecha: datetime, reusado: bool) -> dict:
-    """Arma el registro de una descarga (incluye el hash para detectar cambios)."""
-    sha256 = hashlib.sha256()
-    with open(destino, "rb") as archivo:
-        for bloque in iter(lambda: archivo.read(1024 * 1024), b""):
-            sha256.update(bloque)
-    return {
-        "archivo": destino.relative_to(RAIZ).as_posix(),
-        "url": url,
-        "fecha_descarga": fecha.strftime("%Y-%m-%d %H:%M"),
-        "bytes": destino.stat().st_size,
-        "sha256": sha256.hexdigest(),
-        "reusado_de_corrida_anterior": reusado,
-    }
-
-
-def guardar_registro(registros: list[dict], ruta_csv: Path) -> None:
-    """Guarda la lista de descargas de una corrida en un CSV."""
-    ruta_csv = Path(ruta_csv)
-    ruta_csv.parent.mkdir(parents=True, exist_ok=True)
-    pd.DataFrame(registros).to_csv(ruta_csv, index=False)
-
-
-def guardar_version(registro: dict, fecha_publicacion: str) -> dict:
-    """Guarda una copia del archivo descargado como versión, sin pisar ninguna anterior.
-
-    La copia va a <carpeta del archivo>/versiones/<nombre>__<fecha de publicación>__<12 primeros
-    caracteres del hash>.<extensión>. Si ya hay una versión con ese hash, no se copia de nuevo.
-    `fecha_publicacion` es la fecha en que la fuente actualizó el archivo (por ejemplo, la fecha
-    de última modificación que informa el portal); si no se conoce, se usa la de descarga.
-    Si la fuente vuelve a publicar el mismo contenido con otra fecha, no se copia nada pero se
-    anota esa fecha en el registro (apunta a la versión ya guardada): así la descarga condicional
-    no lo vuelve a bajar en la corrida siguiente y queda constancia de la republicación.
-    Devuelve el registro con la ruta de la versión y si es nueva.
-    """
-    archivo = RAIZ / registro["archivo"]
-    carpeta = archivo.parent / "versiones"
-    carpeta.mkdir(exist_ok=True)
-    fecha = (fecha_publicacion or registro["fecha_descarga"])[:10]
-    ya_guardadas = list(carpeta.glob(f"{archivo.stem}__*__{registro['sha256'][:12]}{archivo.suffix}"))
-    nueva = not ya_guardadas
-    version = ya_guardadas[0] if ya_guardadas else carpeta / f"{archivo.stem}__{fecha}__{registro['sha256'][:12]}{archivo.suffix}"
-    fecha_ya_registrada = False
-    if fecha_publicacion and REGISTRO_VERSIONES.exists():
-        anotadas = pd.read_csv(REGISTRO_VERSIONES)
-        fecha_ya_registrada = ((anotadas["archivo"] == registro["archivo"]) & (anotadas["sha256"] == registro["sha256"])
-                               & (anotadas["fecha_publicacion"] == fecha_publicacion)).any()
-    if nueva:
-        shutil.copy2(archivo, version)
-    if nueva or (fecha_publicacion and not fecha_ya_registrada):
-        fila = pd.DataFrame([{"archivo": registro["archivo"], "version": version.relative_to(RAIZ).as_posix(),
-                              "url": registro["url"], "fecha_publicacion": fecha_publicacion,
-                              "fecha_descarga": registro["fecha_descarga"], "bytes": registro["bytes"],
-                              "sha256": registro["sha256"]}])
-        REGISTRO_VERSIONES.parent.mkdir(parents=True, exist_ok=True)
-        fila.to_csv(REGISTRO_VERSIONES, mode="a", header=not REGISTRO_VERSIONES.exists(), index=False)
-    return {**registro, "version": version.relative_to(RAIZ).as_posix(), "version_nueva": nueva,
-            "fecha_publicacion": fecha_publicacion}
+from comun.descargas import (CRUDOS, ENCABEZADOS, PROCESADOS, RAIZ, REGISTRO_VERSIONES, ZONA_HORARIA,  # noqa: F401
+                             _registro, descargar, guardar_registro, guardar_version)

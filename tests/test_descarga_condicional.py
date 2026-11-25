@@ -25,7 +25,7 @@ sys.path.insert(0, str(RAIZ))
 
 import pandas as pd
 
-from scripts import descargas
+from comun import descargas  # desde el Paso 3a, scripts/descargas.py reexporta comun/descargas.py
 from scripts import secretaria_energia as se
 
 URL_A = "http://datos.energia.gob.ar/dataset/x/resource/11111111-1111-1111-1111-111111111111/download/a.csv"

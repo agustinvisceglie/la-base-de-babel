@@ -1,0 +1,2 @@
+inicio,fin,duracion_segundos,comando,modo,armadores,armadores_escritos,armadores_frenados,controles_bloqueantes,controles_cubiertos_por_excepcion,controles_a_revisar,versiones_nuevas_de_crudos,resultado
+2026-11-25 11:36:35,2026-11-25 11:36:35,0.0,actualizar.py,normal,,,,,,0,0,ok
