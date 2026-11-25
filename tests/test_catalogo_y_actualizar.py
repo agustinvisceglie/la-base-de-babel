@@ -4,7 +4,8 @@ Tests del catálogo (comun/catalogo.py), de los controles bloqueantes (comun/con
 Qué hace: verifica que
     - en el repositorio, toda columna de serie de datos/series/ tenga su fila en catalogo_series.csv
       y toda fila del catálogo apunte a una columna que existe (los dos sentidos);
-    - el catálogo tenga las columnas acordadas (incluidas uso, inicio, discontinuada y con_reservas);
+    - el catálogo tenga las columnas acordadas (incluidas uso, rotulo, inicio, discontinuada y
+      con_reservas) y el rótulo solo acepte los valores aprobados;
     - una declaración de series incompleta o con valores inválidos se rechace;
     - las dependencias entre armadores se resuelvan en orden y un ciclo frene;
     - actualizar.py escriba las series y el catálogo cuando los controles dan bien; no escriba nada
@@ -37,7 +38,7 @@ from comun.controles import COLUMNAS_EXCEPCIONES
 def declaracion(archivo, columna, **cambios):
     serie = {"archivo": archivo, "columna": columna, "nombre": f"Serie {columna}", "unidad": "millones de USD",
              "frecuencia": "mensual", "tipo": "nivel", "precios": "corrientes", "ajuste_estacional": "original",
-             "uso": "base", "organismo": "INDEC", "fuente_id": "cuadro 1", "fuente_url": "https://www.indec.gob.ar",
+             "uso": "base", "organismo": "INDEC", "rotulo": "oficial", "fuente_id": "cuadro 1", "fuente_url": "https://www.indec.gob.ar",
              "lector": "lectores/indec.py", "criterio": "§1", "estimados": "no", "tiene_revisiones": "sí",
              "discontinuada": "no", "con_reservas": "no", "informe_validacion": "datos/validacion/x/informe.md"}
     serie.update(cambios)
@@ -71,8 +72,12 @@ class TestCatalogoDelRepositorio(unittest.TestCase):
     def test_columnas_del_catalogo(self):
         columnas = list(pd.read_csv(RAIZ / "catalogo_series.csv", nrows=0).columns)
         self.assertEqual(columnas, catalogo.COLUMNAS_CATALOGO)
-        for columna in ("uso", "inicio", "discontinuada", "con_reservas"):
+        for columna in ("uso", "rotulo", "inicio", "discontinuada", "con_reservas"):
             self.assertIn(columna, columnas)
+
+    def test_valores_del_rotulo(self):
+        self.assertEqual(catalogo.VALORES_VALIDOS["rotulo"],
+                         {"oficial", "no oficial", "no oficial (académica)", "regulado", "estimación propia"})
 
     def test_columnas_de_excepciones(self):
         columnas = list(pd.read_csv(RAIZ / "datos" / "registros" / "excepciones.csv", nrows=0).columns)
@@ -84,6 +89,8 @@ class TestDeclaracionesYDependencias(unittest.TestCase):
     def test_declaracion_invalida_se_rechaza(self):
         with self.assertRaises(ValueError):
             armador_de_prueba("energia", "a", [declaracion("a.csv", "x", uso="principal")], {}, [])
+        with self.assertRaises(ValueError):
+            armador_de_prueba("energia", "a", [declaracion("a.csv", "x", rotulo="privado")], {}, [])
         incompleta = declaracion("a.csv", "x")
         del incompleta["unidad"]
         with self.assertRaises(ValueError):

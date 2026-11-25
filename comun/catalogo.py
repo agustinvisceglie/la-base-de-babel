@@ -21,8 +21,9 @@ Qué hace:
       toda fila del catálogo apunta a una columna que existe (test de los dos sentidos).
 
 Columnas del catálogo (COLUMNAS_CATALOGO): las de la propuesta de arquitectura (sección 3) más uso
-    (base o control), discontinuada y con_reservas (criterios, sección 10). inicio es el primer dato
-    no vacío de la serie, leído del archivo.
+    (base o control), discontinuada y con_reservas (criterios, sección 10), y rotulo (oficial, no
+    oficial, no oficial (académica), regulado o estimación propia; regla 4 del instructivo). inicio
+    es el primer dato no vacío de la serie, leído del archivo.
 Columnas de datos/registros/auditorias.csv (COLUMNAS_AUDITORIAS): fecha, alcance (id de una serie, un
     bloque o "todo"), commit, resultado (aprobada, con observaciones o rechazada) y notas.
 
@@ -43,7 +44,7 @@ import pandas as pd
 RAIZ = Path(__file__).resolve().parents[1]
 
 CAMPOS_DECLARADOS = ["archivo", "columna", "nombre", "unidad", "frecuencia", "tipo", "precios", "ajuste_estacional",
-                     "uso", "organismo", "fuente_id", "fuente_url", "lector", "criterio", "estimados",
+                     "uso", "organismo", "rotulo", "fuente_id", "fuente_url", "lector", "criterio", "estimados",
                      "tiene_revisiones", "discontinuada", "con_reservas", "informe_validacion"]
 VALORES_VALIDOS = {
     "frecuencia": {"diaria", "mensual", "trimestral", "semestral", "anual"},
@@ -51,11 +52,13 @@ VALORES_VALIDOS = {
     "precios": {"corrientes", "constantes", "no aplica"},
     "ajuste_estacional": {"original", "desestacionalizada", "tendencia-ciclo"},
     "uso": {"base", "control"},
+    # Rótulo de la fuente (regla 4 del instructivo; aprobado por Agustín el 25/11/2026).
+    "rotulo": {"oficial", "no oficial", "no oficial (académica)", "regulado", "estimación propia"},
     "discontinuada": {"sí", "no"},
     "con_reservas": {"sí", "no"},
 }
 COLUMNAS_CATALOGO = ["id", "nombre", "bloque", "archivo", "columna", "unidad", "frecuencia", "tipo", "precios",
-                     "ajuste_estacional", "uso", "organismo", "fuente_id", "fuente_url", "lector", "armador", "criterio",
+                     "ajuste_estacional", "uso", "organismo", "rotulo", "fuente_id", "fuente_url", "lector", "armador", "criterio",
                      "estimados", "tiene_revisiones", "inicio", "fin", "discontinuada", "con_reservas",
                      "publicacion_fuente", "version_crudo", "ultima_actualizacion", "controles_a_revisar",
                      "estado_validacion", "informe_validacion"]
