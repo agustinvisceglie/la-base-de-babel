@@ -9,6 +9,10 @@ Qué hace:
     - descargar_pozos_anual(): baja la producción mensual por pozo de un año, de todos los pozos.
       Se usa solo para controles (es un archivo de unos 250-330 MB por año).
     - descargar_sesco_diaria(): baja la producción promedio diaria por cuenca (SESCO). Solo para controles.
+    - revisar_portal() y autorizar_descarga(): antes de bajar, comparan la fecha de publicación del
+      portal con la registrada y frenan si el portal no responde (archivos sin verificar) o si lo
+      que cambió pasa 1 GB sin ok (regla 8 del instructivo). Ninguna función baja a ciegas.
+      Desde la raíz: .venv/Scripts/python -m scripts.secretaria_energia  (solo revisa, no baja nada).
 
 Fuente: portal de datos de la SE, datos.energia.gob.ar:
     - dataset "Producción de petróleo y gas por pozo (Capítulo IV)", ID c846e79c-026c-4040-897f-1ad3543b407c;
@@ -83,16 +87,87 @@ COLUMNAS_POZOS = ["anio", "mes", "idpozo", "prod_pet", "prod_gas", "formprod", "
                   "sub_tipo_recurso", "cuenca", "fechaingreso"]
 
 
-def fecha_publicacion(url: str) -> str | None:
-    """Fecha de última modificación del recurso según la API del portal (CKAN), o None si no responde."""
+LIMITE_SIN_OK_BYTES = 1_000_000_000  # regla 8 del instructivo: más de 1 GB en total requiere el ok de Agustín
+
+
+class DescargaFrenada(RuntimeError):
+    """Se frena antes de bajar: el portal no informó la fecha de publicación de algún archivo
+    (no se puede saber si cambió) o lo que hay que bajar supera el límite sin ok (regla 8)."""
+
+
+def metadatos_portal(url: str) -> dict | None:
+    """Fecha de última modificación y tamaño del recurso según la API del portal (CKAN,
+    resource_show), o None si la API no responde. No baja el archivo."""
     recurso = re.search(r"/resource/([0-9a-f-]{36})/", url).group(1)
     try:
         respuesta = requests.get(f"http://datos.energia.gob.ar/api/3/action/resource_show?id={recurso}",
                                  headers=ENCABEZADOS, timeout=60)
         respuesta.raise_for_status()
-        return respuesta.json()["result"].get("last_modified")
+        resultado = respuesta.json()["result"]
     except (requests.RequestException, KeyError, ValueError):
         return None
+    if not resultado.get("last_modified"):
+        return None
+    return {"recurso": recurso, "fecha_publicacion": resultado["last_modified"], "bytes": resultado.get("size")}
+
+
+def fecha_publicacion(url: str) -> str | None:
+    """Fecha de última modificación del recurso según la API del portal (CKAN), o None si no responde."""
+    metadatos = metadatos_portal(url)
+    return metadatos["fecha_publicacion"] if metadatos else None
+
+
+def _ultima_version(destino) -> pd.Series | None:
+    """Última fila del registro de versiones de `destino` (la de fecha de publicación más reciente)."""
+    if not REGISTRO_VERSIONES.exists():
+        return None
+    registro = pd.read_csv(REGISTRO_VERSIONES)
+    filas = registro[registro["archivo"] == destino.relative_to(RAIZ).as_posix()]
+    return filas.sort_values("fecha_publicacion").iloc[-1] if len(filas) else None
+
+
+def revisar_portal(archivos: list[tuple[str, str]]) -> pd.DataFrame:
+    """Sin bajar nada: compara, para cada (nombre local, URL), la fecha de publicación que informa
+    el portal con la de la última versión registrada.
+
+    estado: "sin cambios", "cambió", "nuevo" (no hay versión registrada) o "sin respuesta" (la API
+    no respondió). bytes_a_bajar: el tamaño que informa el portal; si no responde, el de la última
+    versión registrada (es lo que habría que volver a bajar para verificarlo)."""
+    filas = []
+    for nombre, url in archivos:
+        ultima = _ultima_version(CARPETA / nombre)
+        metadatos = metadatos_portal(url)
+        registrada = None if ultima is None else ultima["fecha_publicacion"]
+        bytes_local = None if ultima is None else int(ultima["bytes"])
+        if metadatos is None:
+            estado, publicada, tamanio = "sin respuesta", None, bytes_local
+        else:
+            publicada = metadatos["fecha_publicacion"]
+            tamanio = int(metadatos["bytes"]) if metadatos["bytes"] else bytes_local
+            estado = "nuevo" if registrada is None else ("sin cambios" if publicada == registrada else "cambió")
+        filas.append({"archivo": nombre, "recurso": re.search(r"/resource/([0-9a-f-]{36})/", url).group(1),
+                      "publicacion_registrada": registrada, "publicacion_portal": publicada, "estado": estado,
+                      "bytes_registrados": bytes_local, "bytes_a_bajar": tamanio})
+    return pd.DataFrame(filas)
+
+
+def autorizar_descarga(revision: pd.DataFrame, ok_mas_de_1gb: bool = False) -> pd.DataFrame:
+    """Frena (DescargaFrenada) si algún archivo quedó sin verificar porque el portal no respondió,
+    o si lo que cambió supera 1 GB y no hay ok. Devuelve los archivos que hay que bajar."""
+    sin_respuesta = revision[revision["estado"] == "sin respuesta"]
+    if len(sin_respuesta):
+        total = sin_respuesta["bytes_a_bajar"].fillna(0).sum()
+        raise DescargaFrenada(
+            "El portal no informó la fecha de publicación de estos archivos: quedan sin verificar y no se "
+            f"vuelven a bajar sin el ok de Agustín ({total / 1e9:.2f} GB en total).\n"
+            + sin_respuesta[["archivo", "recurso", "publicacion_registrada", "bytes_a_bajar"]].to_string(index=False))
+    a_bajar = revision[revision["estado"].isin(["cambió", "nuevo"])]
+    total = a_bajar["bytes_a_bajar"].fillna(0).sum()
+    if total > LIMITE_SIN_OK_BYTES and not ok_mas_de_1gb:
+        raise DescargaFrenada(
+            f"Hay que bajar {total / 1e9:.2f} GB (más de 1 GB): falta el ok de Agustín (regla 8).\n"
+            + a_bajar[["archivo", "publicacion_registrada", "publicacion_portal", "bytes_a_bajar"]].to_string(index=False))
+    return a_bajar
 
 
 def _version_registrada(destino, publicado: str) -> str | None:
@@ -107,11 +182,18 @@ def _version_registrada(destino, publicado: str) -> str | None:
 def _bajar_archivo(nombre: str, url: str) -> dict:
     """Descarga condicional: si el portal informa la misma fecha de publicación que la última
     versión registrada y el archivo local es esa versión (mismo hash), no se baja de nuevo.
-    Si no, se baja. En los dos casos se guarda la versión (sin pisar las anteriores)."""
+    Si no, se baja. En los dos casos se guarda la versión (sin pisar las anteriores).
+    Si el portal no informa la fecha de publicación, frena (DescargaFrenada): nunca se baja a ciegas.
+    El límite de 1 GB por corrida se controla antes, con revisar_portal() y autorizar_descarga()."""
     destino = CARPETA / nombre
     publicado = fecha_publicacion(url)
+    if publicado is None:
+        tamanio = destino.stat().st_size if destino.exists() else None
+        raise DescargaFrenada(f"El portal no informó la fecha de publicación de {nombre} (recurso de {url}); "
+                              f"queda sin verificar y no se vuelve a bajar sin el ok de Agustín "
+                              f"(tamaño local: {tamanio if tamanio is not None else 'no hay copia local'} bytes).")
     registro = None
-    if publicado and destino.exists():
+    if destino.exists():
         hash_registrado = _version_registrada(destino, publicado)
         if hash_registrado:
             local = descargar(url, destino, reusar_si_existe=True)  # no baja: calcula el hash del archivo local
@@ -171,6 +253,12 @@ def descargar_pozos_anual_ddjj(anio: int) -> tuple[pd.DataFrame, dict]:
     return _leer_pozos(tabla), registro
 
 
+def archivos_produccion() -> list[tuple[str, str]]:
+    """Todos los archivos de la SE que usa el armado de producción (series, por pozo y controles)."""
+    return (list(SERIES_AGREGADAS.values()) + [POZOS_NO_CONVENCIONAL] + list(POZOS_ANUAL_DDJJ.values())
+            + list(POZOS_ANUAL.values()) + list(SESCO_DIARIA.values()))
+
+
 def descargar_sesco_diaria() -> tuple[pd.DataFrame, list[dict]]:
     """SESCO: producción promedio diaria total del país (suma de cuencas), petróleo en m3/d y gas
     en miles de m3/d, tal como vienen."""
@@ -182,3 +270,14 @@ def descargar_sesco_diaria() -> tuple[pd.DataFrame, list[dict]]:
         registros.append(registro)
     tabla = pd.DataFrame(columnas).reset_index()
     return _indice_mensual(tabla), registros
+
+
+if __name__ == "__main__":
+    # Solo revisa el portal: no baja ningún archivo.
+    revision = revisar_portal(archivos_produccion())
+    pd.set_option("display.width", 220)
+    print(revision.to_string(index=False))
+    a_bajar = revision[revision["estado"].isin(["cambió", "nuevo"])]
+    sin_respuesta = revision[revision["estado"] == "sin respuesta"]
+    print(f"\nCambiaron o son nuevos: {len(a_bajar)} de {len(revision)} "
+          f"({a_bajar['bytes_a_bajar'].fillna(0).sum() / 1e9:.3f} GB). Sin respuesta del portal: {len(sin_respuesta)}.")

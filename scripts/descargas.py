@@ -101,6 +101,9 @@ def guardar_version(registro: dict, fecha_publicacion: str) -> dict:
     caracteres del hash>.<extensión>. Si ya hay una versión con ese hash, no se copia de nuevo.
     `fecha_publicacion` es la fecha en que la fuente actualizó el archivo (por ejemplo, la fecha
     de última modificación que informa el portal); si no se conoce, se usa la de descarga.
+    Si la fuente vuelve a publicar el mismo contenido con otra fecha, no se copia nada pero se
+    anota esa fecha en el registro (apunta a la versión ya guardada): así la descarga condicional
+    no lo vuelve a bajar en la corrida siguiente y queda constancia de la republicación.
     Devuelve el registro con la ruta de la versión y si es nueva.
     """
     archivo = RAIZ / registro["archivo"]
@@ -110,8 +113,14 @@ def guardar_version(registro: dict, fecha_publicacion: str) -> dict:
     ya_guardadas = list(carpeta.glob(f"{archivo.stem}__*__{registro['sha256'][:12]}{archivo.suffix}"))
     nueva = not ya_guardadas
     version = ya_guardadas[0] if ya_guardadas else carpeta / f"{archivo.stem}__{fecha}__{registro['sha256'][:12]}{archivo.suffix}"
+    fecha_ya_registrada = False
+    if fecha_publicacion and REGISTRO_VERSIONES.exists():
+        anotadas = pd.read_csv(REGISTRO_VERSIONES)
+        fecha_ya_registrada = ((anotadas["archivo"] == registro["archivo"]) & (anotadas["sha256"] == registro["sha256"])
+                               & (anotadas["fecha_publicacion"] == fecha_publicacion)).any()
     if nueva:
         shutil.copy2(archivo, version)
+    if nueva or (fecha_publicacion and not fecha_ya_registrada):
         fila = pd.DataFrame([{"archivo": registro["archivo"], "version": version.relative_to(RAIZ).as_posix(),
                               "url": registro["url"], "fecha_publicacion": fecha_publicacion,
                               "fecha_descarga": registro["fecha_descarga"], "bytes": registro["bytes"],
