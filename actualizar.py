@@ -21,7 +21,7 @@ Uso (desde la raíz del repositorio):
     .venv/Scripts/python actualizar.py --bloque energia         un bloque (y lo que necesita de otros)
     .venv/Scripts/python actualizar.py --serie <id>             el armador de esa serie
     .venv/Scripts/python actualizar.py --sin-descargar          rearma con las últimas versiones ya bajadas
-    .venv/Scripts/python actualizar.py --crudos-al 2026-10-31   rearma con las versiones publicadas hasta esa fecha
+    .venv/Scripts/python actualizar.py --crudos-al 2026-10-31   rearma con la última versión de cada crudo bajada hasta esa fecha
     .venv/Scripts/python actualizar.py --listar                 muestra bloques, armadores, series y dependencias
     .venv/Scripts/python actualizar.py --ok-descarga-grande     ok de Agustín para bajar más de 1 GB (regla 8)
 
@@ -50,7 +50,7 @@ def argumentos(argv=None) -> argparse.Namespace:
     analizador.add_argument("--bloque", help="solo este bloque (y lo que necesita de otros)")
     analizador.add_argument("--serie", help="solo el armador de esta serie (id del catálogo)")
     analizador.add_argument("--sin-descargar", action="store_true", help="usa las últimas versiones ya bajadas, sin internet")
-    analizador.add_argument("--crudos-al", metavar="AAAA-MM-DD", help="usa las versiones de los crudos publicadas hasta esa fecha")
+    analizador.add_argument("--crudos-al", metavar="AAAA-MM-DD", help="usa, de cada crudo, la última versión bajada hasta esa fecha (lo que teníamos ese día)")
     analizador.add_argument("--listar", action="store_true", help="muestra bloques, armadores, series y dependencias")
     analizador.add_argument("--ok-descarga-grande", action="store_true", help="ok de Agustín para bajar más de 1 GB (regla 8)")
     return analizador.parse_args(argv)

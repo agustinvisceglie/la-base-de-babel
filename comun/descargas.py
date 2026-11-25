@@ -20,8 +20,9 @@ Qué hace:
     - revisar_http() y autorizar_descarga(): antes de bajar, qué cambió y cuánto pesa; frenan si la
       fuente no responde, si no informa fecha ni ETag y es grande o de tamaño desconocido, o si lo
       que hay que bajar pasa 1 GB sin el ok de Agustín (regla 8).
-    - configurar(): los modos de actualizar.py: sin descargar (usa las últimas versiones guardadas) y
-      crudos al AAAA-MM-DD (usa las versiones publicadas hasta esa fecha).
+    - configurar(): los modos de actualizar.py: sin descargar (usa las últimas versiones bajadas) y
+      crudos al AAAA-MM-DD (usa, de cada crudo, la última versión bajada hasta esa fecha: lo que
+      teníamos ese día, según la fecha de descarga del registro).
     - version_registrada() y leer_bytes(): ubican la versión que corresponde y la abren (comprimida o no).
 
 Columnas de datos/registros/versiones_crudos.csv (COLUMNAS_REGISTRO): organismo, recurso (ID en la
@@ -77,8 +78,9 @@ class DescargaFrenada(RuntimeError):
 
 
 def configurar(sin_descargar: bool = False, crudos_al: str | None = None, ok_mas_de_1gb: bool = False) -> None:
-    """Modo de la corrida: sin_descargar usa las últimas versiones guardadas, sin internet;
-    crudos_al ("AAAA-MM-DD") usa, de cada crudo, la última versión publicada hasta esa fecha;
+    """Modo de la corrida: sin_descargar usa las últimas versiones bajadas, sin internet;
+    crudos_al ("AAAA-MM-DD") usa, de cada crudo, la última versión bajada hasta esa fecha (lo que
+    teníamos ese día);
     ok_mas_de_1gb es el ok de Agustín para bajar más de 1 GB en esta corrida (regla 8)."""
     _MODO["sin_descargar"] = bool(sin_descargar)
     _MODO["crudos_al"] = crudos_al
@@ -236,21 +238,21 @@ def guardar_version(registro: dict, fecha_publicacion: str | None, origen_fecha:
 
 
 def version_registrada(archivo: Path | str, al: str | None = None) -> dict:
-    """La última versión registrada de un crudo (por fecha de publicación, o de descarga si no hay),
-    o la última publicada hasta `al` ("AAAA-MM-DD"). Frena si no hay ninguna o si falta la copia."""
+    """La última versión BAJADA de un crudo (por fecha de descarga), o la última bajada hasta `al`
+    ("AAAA-MM-DD", inclusive): reconstruye lo que teníamos en esa fecha (criterio aprobado por
+    Agustín el 25/11/2026). Frena si no hay ninguna o si falta la copia."""
     archivo = Path(archivo)
     logico = (archivo.relative_to(RAIZ) if archivo.is_absolute() else archivo).as_posix()
     filas = leer_registro()
-    filas = filas[filas["archivo"] == logico].copy()
-    filas["fecha_orden"] = filas["fecha_publicacion"].fillna(filas["fecha_descarga"]).str[:10]
+    filas = filas[filas["archivo"] == logico]
     if al:
-        filas = filas[filas["fecha_orden"] <= al]
+        filas = filas[filas["fecha_descarga"].str[:10] <= al]
     if filas.empty:
-        raise DescargaFrenada(f"No hay ninguna versión registrada de {logico}" + (f" publicada hasta el {al}" if al else ""))
-    ultima = filas.sort_values(["fecha_orden", "fecha_descarga"], kind="stable").iloc[-1]
+        raise DescargaFrenada(f"No hay ninguna versión registrada de {logico}" + (f" bajada hasta el {al}" if al else ""))
+    ultima = filas.sort_values("fecha_descarga", kind="stable").iloc[-1]
     if not (RAIZ / ultima["version"]).exists():
         raise DescargaFrenada(f"Falta la copia {ultima['version']} registrada para {logico}")
-    return {**ultima.drop(labels="fecha_orden").to_dict(), "descargado": False}
+    return {**ultima.to_dict(), "descargado": False}
 
 
 def leer_bytes(version: Path | str) -> io.BytesIO:

@@ -8,7 +8,9 @@ Qué hace: verifica que
       "vigente", y frene sin bajar si la fuente no responde;
     - una fuente sin Last-Modified ni ETag (regla 8): si es chica (menos de 50 MB) se baje, se compare
       el hash y, si no cambió, solo se anote; si es grande o no se sabe cuánto pesa, frene sin bajar;
-    - los modos sin descargar y crudos al AAAA-MM-DD no usen internet y elijan la versión correcta;
+    - los modos sin descargar y crudos al AAAA-MM-DD no usen internet y elijan la versión correcta
+      (crudos al = la última versión BAJADA hasta esa fecha, según la fecha de descarga);
+    - las versiones viejas sin comprimir se compriman verificando el hash antes de borrar el original;
     - el límite de 1 GB frene sin ok y deje pasar con el ok de la corrida.
 Fuentes: ninguna (la fuente HTTP se simula; todo pasa en una carpeta temporal).
 Genera: nada.
@@ -46,6 +48,7 @@ class BaseTemporal(unittest.TestCase):
             parche.start()
         d.configurar()
         self.contenido = {"actual": b"anio,valor\n2026,1\n"}
+        self.ahora = pd.Timestamp("2026-11-25 10:00")  # fecha de descarga simulada
 
     def tearDown(self):
         d.configurar()
@@ -57,7 +60,7 @@ class BaseTemporal(unittest.TestCase):
         destino = Path(destino)
         destino.parent.mkdir(parents=True, exist_ok=True)
         destino.write_bytes(self.contenido["actual"])
-        return d._registro(url, destino, pd.Timestamp("2026-11-25 10:00"), reusado=False)
+        return d._registro(url, destino, self.ahora, reusado=False)
 
     def registro(self):
         return pd.read_csv(d.REGISTRO_VERSIONES, dtype=str)
@@ -182,8 +185,10 @@ class TestDescargaCondicional(BaseTemporal):
             bajar.assert_not_called()
 
     def test_sin_descargar_y_crudos_al_no_usan_internet(self):
+        self.ahora = pd.Timestamp("2026-10-21 10:00")  # bajada el 21/10
         self.correr({"fecha_publicacion": "2026-10-20T10:00:00+00:00", "etag": '"a"', "bytes": 18})
         self.contenido["actual"] = b"anio,valor\n2026,9\n"
+        self.ahora = pd.Timestamp("2026-11-20 10:00")  # bajada el 20/11
         self.correr({"fecha_publicacion": "2026-11-19T10:00:00+00:00", "etag": '"b"', "bytes": 18})
         with mock.patch.object(d, "metadatos_http") as encabezados, mock.patch.object(d, "descargar") as bajar:
             d.configurar(sin_descargar=True)
@@ -197,6 +202,17 @@ class TestDescargaCondicional(BaseTemporal):
             bajar.assert_not_called()
         self.assertEqual(d.leer_bytes(ultima["version"]).read(), b"anio,valor\n2026,9\n")
         self.assertEqual(d.leer_bytes(al_31_10["version"]).read(), b"anio,valor\n2026,1\n")
+
+    def test_crudos_al_usa_la_fecha_de_descarga_no_la_de_publicacion(self):
+        # Publicada el 20/10 pero bajada recién el 05/11: al 31/10 no la teníamos.
+        self.ahora = pd.Timestamp("2026-11-05 09:00")
+        self.correr({"fecha_publicacion": "2026-10-20T10:00:00+00:00", "etag": '"a"', "bytes": 18})
+        d.configurar(crudos_al="2026-10-31")
+        with self.assertRaises(d.DescargaFrenada):
+            d.descargar_condicional(URL, "indec", "prueba.xls")
+        d.configurar(crudos_al="2026-11-05")  # el día de la descarga cuenta (inclusive)
+        self.assertEqual(d.leer_bytes(d.descargar_condicional(URL, "indec", "prueba.xls")["version"]).read(),
+                         b"anio,valor\n2026,1\n")
 
 
 class TestComprimirVersionesViejas(BaseTemporal):
