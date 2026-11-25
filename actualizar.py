@@ -24,6 +24,7 @@ Uso (desde la raíz del repositorio):
     .venv/Scripts/python actualizar.py --crudos-al 2026-10-31   rearma con la última versión de cada crudo bajada hasta esa fecha
     .venv/Scripts/python actualizar.py --listar                 muestra bloques, armadores, series y dependencias
     .venv/Scripts/python actualizar.py --ok-descarga-grande     ok de Agustín para bajar más de 1 GB (regla 8)
+    .venv/Scripts/python actualizar.py --respaldar              al final, respalda las versiones .gz nuevas en el OneDrive personal
 
 Fuentes: las de cada armador. Genera: datos/series/, datos/validacion/<bloque>/, catalogo_series.csv,
     datos/registros/corridas.csv (y, vía los lectores, versiones de crudos y su registro).
@@ -53,6 +54,8 @@ def argumentos(argv=None) -> argparse.Namespace:
     analizador.add_argument("--crudos-al", metavar="AAAA-MM-DD", help="usa, de cada crudo, la última versión bajada hasta esa fecha (lo que teníamos ese día)")
     analizador.add_argument("--listar", action="store_true", help="muestra bloques, armadores, series y dependencias")
     analizador.add_argument("--ok-descarga-grande", action="store_true", help="ok de Agustín para bajar más de 1 GB (regla 8)")
+    analizador.add_argument("--respaldar", action="store_true",
+                            help="al final, copia al OneDrive personal las versiones .gz que falten (comun/respaldar_versiones.py)")
     return analizador.parse_args(argv)
 
 
@@ -137,6 +140,14 @@ def ejecutar(argv=None, lista: list[catalogo.Armador] | None = None, raiz: Path 
     catalogo.escribir_catalogo(nuevo, raiz)
     faltan, sobran = catalogo.verificar_catalogo(nuevo, lista, raiz)
     error = bool(frenados) or bool(faltan) or bool(sobran)
+    if args.respaldar:
+        from comun import respaldar_versiones
+        try:
+            copiadas = respaldar_versiones.respaldar()
+            print(f"Respaldo: {len(copiadas)} archivos copiados y verificados en el OneDrive personal.")
+        except respaldar_versiones.RespaldoFrenado as problema:
+            print(f"Respaldo frenado (no se pisó ni se borró nada): {problema}")
+            error = True
 
     modo = "sin descargar" if args.sin_descargar else (f"crudos al {args.crudos_al}" if args.crudos_al else "normal")
     controles.registrar_corrida({
