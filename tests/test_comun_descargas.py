@@ -199,6 +199,52 @@ class TestDescargaCondicional(BaseTemporal):
         self.assertEqual(d.leer_bytes(al_31_10["version"]).read(), b"anio,valor\n2026,1\n")
 
 
+class TestComprimirVersionesViejas(BaseTemporal):
+    """comun/comprimir_versiones.py: versiones sin comprimir de antes del Paso 3a."""
+
+    def version_vieja(self, contenido: bytes, sha256: str | None = None):
+        carpeta = self.raiz / "datos" / "crudos" / "secretaria_energia" / "versiones"
+        carpeta.mkdir(parents=True, exist_ok=True)
+        original = carpeta / "serie__2026-10-21__abc.csv"
+        original.write_bytes(contenido)
+        fila = {"organismo": "secretaria_energia", "recurso": "r", "archivo": "datos/crudos/secretaria_energia/serie.csv",
+                "version": original.relative_to(self.raiz).as_posix(), "url": URL, "fecha_publicacion": "2026-10-21T05:09:09",
+                "origen_fecha": "portal CKAN (last_modified)", "etag": None, "fecha_descarga": "2026-11-18 11:38",
+                "bytes": len(contenido), "sha256": sha256 or d.sha256_de(original)}
+        d._anotar(fila)
+        return original
+
+    def test_comprime_verifica_actualiza_el_registro_y_borra_solo_con_ok(self):
+        from comun.comprimir_versiones import comprimir_versiones
+        original = self.version_vieja(b"a,b\n1,2\n" * 100)
+        antes = self.registro()
+        tabla = comprimir_versiones(borrar_originales=False)
+        despues = self.registro()
+        self.assertTrue(original.exists())                                   # sin ok, no se borra
+        self.assertEqual(despues.loc[0, "version"], antes.loc[0, "version"] + ".gz")
+        otras = [c for c in antes.columns if c != "version"]
+        self.assertTrue(despues[otras].equals(antes[otras]))                 # hash, fechas y bytes iguales
+        self.assertTrue(tabla.loc[0, "hash_gz_ok"])
+        self.assertEqual(d.sha256_de(self.raiz / despues.loc[0, "version"]), antes.loc[0, "sha256"])
+
+    def test_borra_el_original_despues_de_verificar(self):
+        from comun.comprimir_versiones import comprimir_versiones
+        original = self.version_vieja(b"c,d\n3,4\n")
+        tabla = comprimir_versiones(borrar_originales=True)
+        self.assertFalse(original.exists())
+        self.assertTrue(tabla.loc[0, "original_borrado"])
+        self.assertTrue((original.parent / (original.name + ".gz")).exists())
+
+    def test_hash_distinto_frena_sin_tocar_nada(self):
+        from comun.comprimir_versiones import comprimir_versiones
+        original = self.version_vieja(b"e,f\n5,6\n", sha256="0" * 64)
+        antes = self.registro()
+        with self.assertRaises(RuntimeError):
+            comprimir_versiones(borrar_originales=True)
+        self.assertTrue(original.exists())
+        self.assertTrue(self.registro().equals(antes))
+
+
 class TestLimiteDeUnGB(BaseTemporal):
     revision = pd.DataFrame([{"archivo": "a", "estado": "cambió", "publicacion_registrada": None,
                               "publicacion_fuente": "x", "bytes_a_bajar": 1_200_000_000}])
