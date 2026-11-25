@@ -5,7 +5,9 @@ Qué hace: verifica que
     - cada versión se guarde comprimida (.gz), con el hash del original, sin duplicar una versión
       vieja sin comprimir del mismo contenido, y que una republicación solo anote la fecha;
     - la descarga condicional baje solo si cambió el Last-Modified (o el ETag), no deje copia
-      "vigente", y frene sin bajar si la fuente no responde o no informa Last-Modified ni ETag;
+      "vigente", y frene sin bajar si la fuente no responde;
+    - una fuente sin Last-Modified ni ETag (regla 8): si es chica (menos de 50 MB) se baje, se compare
+      el hash y, si no cambió, solo se anote; si es grande o no se sabe cuánto pesa, frene sin bajar;
     - los modos sin descargar y crudos al AAAA-MM-DD no usen internet y elijan la versión correcta;
     - el límite de 1 GB frene sin ok y deje pasar con el ok de la corrida.
 Fuentes: ninguna (la fuente HTTP se simula; todo pasa en una carpeta temporal).
@@ -137,12 +139,41 @@ class TestDescargaCondicional(BaseTemporal):
         resultado, bajar = self.correr({"fecha_publicacion": None, "etag": 'W/"1"', "bytes": 18})
         self.assertEqual(bajar.call_count, 0)
 
-    def test_sin_last_modified_ni_etag_frena_sin_bajar(self):
-        with mock.patch.object(d, "metadatos_http", return_value={"fecha_publicacion": None, "etag": None, "bytes": 10}), \
+    def test_sin_fecha_grande_frena_sin_bajar(self):
+        with mock.patch.object(d, "metadatos_http", return_value={"fecha_publicacion": None, "etag": None, "bytes": 60_000_000}), \
                 mock.patch.object(d, "descargar") as bajar:
             with self.assertRaises(d.DescargaFrenada):
                 d.descargar_condicional(URL, "indec", "prueba.xls")
             bajar.assert_not_called()
+
+    def test_sin_fecha_y_sin_tamanio_conocido_frena_sin_bajar(self):
+        with mock.patch.object(d, "metadatos_http", return_value={"fecha_publicacion": None, "etag": None, "bytes": None}), \
+                mock.patch.object(d, "descargar") as bajar:
+            with self.assertRaises(d.DescargaFrenada):
+                d.descargar_condicional(URL, "indec", "prueba.xls")
+            bajar.assert_not_called()
+
+    def test_sin_fecha_chica_baja_compara_el_hash_y_anota(self):
+        sin_fecha = {"fecha_publicacion": None, "etag": None, "bytes": 18}
+        primera, _ = self.correr(sin_fecha)                       # versión nueva, con la fecha de descarga
+        segunda, bajar = self.correr(sin_fecha)                   # mismo contenido: solo se anota
+        self.assertEqual(bajar.call_count, 1)
+        self.assertTrue(primera["version_nueva"])
+        self.assertFalse(segunda["version_nueva"])
+        self.assertEqual(primera["version"], segunda["version"])
+        self.contenido["actual"] = b"anio,valor\n2026,7\n"
+        tercera, _ = self.correr(sin_fecha)                       # cambió: versión nueva
+        self.assertTrue(tercera["version_nueva"])
+        registro = self.registro()
+        self.assertEqual(list(registro["origen_fecha"]), [d.ORIGEN_SIN_FECHA, d.ORIGEN_SIN_FECHA_SIN_CAMBIOS, d.ORIGEN_SIN_FECHA])
+        self.assertTrue(registro["fecha_publicacion"].isna().all())
+        self.assertEqual(len(list((self.raiz / "datos" / "crudos" / "indec" / "versiones").iterdir())), 2)
+
+    def test_sin_fecha_ni_tamanio_de_la_fuente_usa_el_de_la_ultima_version(self):
+        self.correr({"fecha_publicacion": None, "etag": None, "bytes": 18})
+        resultado, bajar = self.correr({"fecha_publicacion": None, "etag": None, "bytes": None})
+        self.assertEqual(bajar.call_count, 1)  # la última versión pesa 18 bytes: es chica
+        self.assertFalse(resultado["version_nueva"])
 
     def test_fuente_sin_respuesta_frena_sin_bajar(self):
         with mock.patch.object(d, "metadatos_http", return_value=None), mock.patch.object(d, "descargar") as bajar:
@@ -180,11 +211,15 @@ class TestLimiteDeUnGB(BaseTemporal):
         d.configurar(ok_mas_de_1gb=True)
         self.assertEqual(len(d.autorizar_descarga(self.revision)), 1)
 
-    def test_sin_fecha_frena_aunque_haya_ok(self):
+    def test_sin_fecha_grande_frena_aunque_haya_ok(self):
         d.configurar(ok_mas_de_1gb=True)
-        revision = self.revision.assign(estado="sin fecha")
+        revision = self.revision.assign(estado="sin fecha, grande o sin tamaño")
         with self.assertRaises(d.DescargaFrenada):
             d.autorizar_descarga(revision)
+
+    def test_sin_fecha_chica_se_baja(self):
+        revision = self.revision.assign(estado="sin fecha, chica", bytes_a_bajar=2_272)
+        self.assertEqual(len(d.autorizar_descarga(revision)), 1)
 
 
 if __name__ == "__main__":

@@ -12,11 +12,14 @@ Qué hace:
       contenido con otra fecha, en datos/registros/versiones_crudos.csv (solo agrega filas).
     - metadatos_http(): pide solo los encabezados (HEAD): Last-Modified, ETag y tamaño.
     - descargar_condicional(): para fuentes que publican por HTTP (INDEC, BCRA, ...): baja solo si el
-      Last-Modified o el ETag cambiaron respecto de la última versión registrada. Si la fuente no
-      informa ninguno de los dos, frena (regla 8 del instructivo: no se baja a ciegas). No deja una
-      copia "vigente": solo la versión comprimida.
+      Last-Modified o el ETag cambiaron respecto de la última versión registrada. No deja una copia
+      "vigente": solo la versión comprimida. Si la fuente no informa ninguno de los dos (regla 8 del
+      instructivo, precisada el 25/11/2026): si pesa menos de 50 MB, se baja, se compara el hash y,
+      si ya estaba, solo se anota la verificación; si cambió, se guarda con la fecha de descarga
+      (origen_fecha lo dice). Si es grande o no se sabe cuánto pesa, frena sin bajar.
     - revisar_http() y autorizar_descarga(): antes de bajar, qué cambió y cuánto pesa; frenan si la
-      fuente no responde o si lo que hay que bajar pasa 1 GB sin el ok de Agustín (regla 8).
+      fuente no responde, si no informa fecha ni ETag y es grande o de tamaño desconocido, o si lo
+      que hay que bajar pasa 1 GB sin el ok de Agustín (regla 8).
     - configurar(): los modos de actualizar.py: sin descargar (usa las últimas versiones guardadas) y
       crudos al AAAA-MM-DD (usa las versiones publicadas hasta esa fecha).
     - version_registrada() y leer_bytes(): ubican la versión que corresponde y la abren (comprimida o no).
@@ -58,6 +61,11 @@ COLUMNAS_REGISTRO = ["organismo", "recurso", "archivo", "version", "url", "fecha
 ENCABEZADOS = {"User-Agent": "Mozilla/5.0 (compatible; descarga-datos-publicos/1.0)"}
 ZONA_HORARIA = ZoneInfo("America/Argentina/Buenos_Aires")
 LIMITE_SIN_OK_BYTES = 1_000_000_000  # regla 8 del instructivo: más de 1 GB en total requiere el ok de Agustín
+# Regla 8 (precisada el 25/11/2026): una fuente sin fecha de publicación ni ETag se baja solo si es
+# chica (menos de 50 MB según lo que informa la fuente o, si no lo informa, según la última versión).
+LIMITE_SIN_FECHA_BYTES = 50_000_000
+ORIGEN_SIN_FECHA = "sin fecha ni ETag de la fuente: se usa la fecha de descarga"
+ORIGEN_SIN_FECHA_SIN_CAMBIOS = "sin fecha ni ETag de la fuente: verificada por hash en la fecha de descarga, sin cambios"
 
 # Modo de la corrida (lo fija actualizar.py con configurar()).
 _MODO = {"sin_descargar": False, "crudos_al": None, "ok_mas_de_1gb": False}
@@ -296,7 +304,8 @@ def descargar_condicional(url: str, organismo: str, nombre: str, recurso: str | 
       registrada que corresponde.
     - Pide los encabezados: si el Last-Modified (o, si no hay, el ETag) es el de la última versión
       registrada y la copia existe, no baja nada.
-    - Si la fuente no responde, o no informa Last-Modified ni ETag, frena (regla 8 del instructivo).
+    - Si la fuente no responde, frena. Si no informa Last-Modified ni ETag, aplica la regla 8 (a) y
+      (b): ver _descargar_sin_fecha().
     Devuelve el registro de la versión (con "version", la ruta de la copia, y "descargado")."""
     logico = CRUDOS / organismo / nombre
     relativo = logico.relative_to(RAIZ).as_posix()
@@ -305,9 +314,9 @@ def descargar_condicional(url: str, organismo: str, nombre: str, recurso: str | 
     metadatos = metadatos_http(url)
     if metadatos is None:
         raise DescargaFrenada(f"La fuente no respondió los encabezados de {url}: {nombre} queda sin verificar.")
-    if not metadatos["fecha_publicacion"] and not metadatos["etag"]:
-        raise DescargaFrenada(f"{url} no informa Last-Modified ni ETag: no se baja a ciegas (regla 8 del instructivo).")
     ultima = _ultima_fila(relativo)
+    if not metadatos["fecha_publicacion"] and not metadatos["etag"]:
+        return _descargar_sin_fecha(url, logico, relativo, organismo, recurso, metadatos, ultima)
     if ultima is not None and _misma_publicacion(ultima, metadatos) and (RAIZ / ultima["version"]).exists():
         return {**ultima.drop(labels="_orden").to_dict(), "descargado": False}
     temporal = logico.with_name(logico.name + ".descarga")
@@ -320,10 +329,46 @@ def descargar_condicional(url: str, organismo: str, nombre: str, recurso: str | 
     return {**resultado, "descargado": True}
 
 
+def tamanio_conocido(metadatos: dict, ultima: pd.Series | None) -> int | None:
+    """Lo que pesa el recurso: lo que informa la fuente (Content-Length) o, si no lo informa, la
+    última versión registrada. None si no se puede saber."""
+    if metadatos.get("bytes") is not None:
+        return int(metadatos["bytes"])
+    if ultima is not None and pd.notna(ultima["bytes"]):
+        return int(ultima["bytes"])
+    return None
+
+
+def _descargar_sin_fecha(url: str, logico: Path, relativo: str, organismo: str, recurso: str | None,
+                         metadatos: dict, ultima: pd.Series | None) -> dict:
+    """Regla 8 (a) y (b): la fuente no informa fecha de publicación ni ETag.
+    - Si se sabe que pesa menos de 50 MB: se baja y se compara el hash con las versiones guardadas.
+      Si es una versión que ya estaba, solo se anota la verificación (una fila en el registro que
+      apunta a esa versión); si cambió, se guarda la versión nueva con la fecha de descarga.
+    - Si es grande o no se puede saber cuánto pesa: frena sin bajar."""
+    tamanio = tamanio_conocido(metadatos, ultima)
+    if tamanio is None or tamanio >= LIMITE_SIN_FECHA_BYTES:
+        cuanto = "no se puede saber cuánto pesa" if tamanio is None else f"pesa {tamanio / 1e6:.1f} MB (50 MB o más)"
+        raise DescargaFrenada(f"{url} no informa fecha de publicación ni ETag y {cuanto}: no se baja a ciegas "
+                              f"(regla 8 del instructivo).")
+    temporal = logico.with_name(logico.name + ".descarga")
+    registro = descargar(url, temporal)
+    registro["archivo"] = relativo
+    resultado = guardar_version(registro, None, origen_fecha=ORIGEN_SIN_FECHA, organismo=organismo,
+                                recurso=recurso, origen=temporal)
+    temporal.unlink()  # el contenido quedó como versión comprimida (nueva o ya guardada)
+    if not resultado["version_nueva"]:
+        _anotar({"organismo": organismo, "recurso": recurso, "archivo": relativo, "version": resultado["version"],
+                 "url": url, "fecha_publicacion": None, "origen_fecha": ORIGEN_SIN_FECHA_SIN_CAMBIOS, "etag": None,
+                 "fecha_descarga": registro["fecha_descarga"], "bytes": registro["bytes"], "sha256": registro["sha256"]})
+    return {**resultado, "descargado": True}
+
+
 def revisar_http(archivos: list[tuple[str, str, str]]) -> pd.DataFrame:
     """Sin bajar nada: para cada (organismo, nombre, url), compara los encabezados con la última
-    versión registrada. estado: "sin cambios", "cambió", "nuevo" o "sin respuesta" (o "sin fecha",
-    si no informa Last-Modified ni ETag). bytes_a_bajar: el Content-Length, o el de la última versión."""
+    versión registrada. estado: "sin cambios", "cambió", "nuevo" o "sin respuesta"; si la fuente no
+    informa Last-Modified ni ETag, "sin fecha, chica" (menos de 50 MB: se baja y se compara el hash)
+    o "sin fecha, grande o sin tamaño" (frena). bytes_a_bajar: el Content-Length, o el de la última versión."""
     filas = []
     for organismo, nombre, url in archivos:
         relativo = (CRUDOS / organismo / nombre).relative_to(RAIZ).as_posix()
@@ -333,7 +378,9 @@ def revisar_http(archivos: list[tuple[str, str, str]]) -> pd.DataFrame:
         if metadatos is None:
             estado, tamanio = "sin respuesta", bytes_registrados
         elif not metadatos["fecha_publicacion"] and not metadatos["etag"]:
-            estado, tamanio = "sin fecha", metadatos["bytes"] or bytes_registrados
+            tamanio = tamanio_conocido(metadatos, ultima)
+            chica = tamanio is not None and tamanio < LIMITE_SIN_FECHA_BYTES
+            estado = "sin fecha, chica" if chica else "sin fecha, grande o sin tamaño"
         else:
             tamanio = metadatos["bytes"] or bytes_registrados
             estado = "nuevo" if ultima is None else ("sin cambios" if _misma_publicacion(ultima, metadatos) else "cambió")
@@ -350,14 +397,14 @@ def autorizar_descarga(revision: pd.DataFrame, ok_mas_de_1gb: bool | None = None
     Devuelve los archivos que hay que bajar."""
     if ok_mas_de_1gb is None:
         ok_mas_de_1gb = _MODO["ok_mas_de_1gb"]
-    sin_verificar = revision[revision["estado"].isin(["sin respuesta", "sin fecha"])]
+    sin_verificar = revision[revision["estado"].isin(["sin respuesta", "sin fecha, grande o sin tamaño"])]
     if len(sin_verificar):
         total = sin_verificar["bytes_a_bajar"].fillna(0).sum()
         raise DescargaFrenada(
-            "Estos archivos no se pueden verificar (la fuente no respondió o no informa Last-Modified ni ETag) y no "
-            f"se bajan sin el ok de Agustín ({total / 1e9:.2f} GB en total):\n"
+            "Estos archivos no se pueden verificar (la fuente no respondió, o no informa Last-Modified ni ETag y es "
+            f"grande o no se sabe cuánto pesa) y no se bajan sin el ok de Agustín ({total / 1e9:.2f} GB en total):\n"
             + sin_verificar[["archivo", "estado", "publicacion_registrada", "bytes_a_bajar"]].to_string(index=False))
-    a_bajar = revision[revision["estado"].isin(["cambió", "nuevo"])]
+    a_bajar = revision[revision["estado"].isin(["cambió", "nuevo", "sin fecha, chica"])]
     total = a_bajar["bytes_a_bajar"].fillna(0).sum()
     if total > LIMITE_SIN_OK_BYTES and not ok_mas_de_1gb:
         raise DescargaFrenada(
