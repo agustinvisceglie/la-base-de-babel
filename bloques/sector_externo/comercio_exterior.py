@@ -79,6 +79,17 @@ CONTROLES_PUBLICADOS = [
     ("Importación cap. 27, acum. ene-sep 2026", "2026-10-19", "cap27", ("acumulado", "actual", "impo"), 2787, "Ídem"),
     ("Saldo cap. 27, acum. ene-sep 2026", "2026-10-19", "cap27", ("acumulado", "actual", "saldo"), 8000, "Ídem"),
     ("Saldo cap. 27, acum. ene-sep 2025 (revisado)", "2026-10-19", "cap27", ("acumulado", "anterior", "saldo"), 4503, "Ídem"),
+    # Informe del 19/11/2026: el primero con el formato nuevo del cuadro 1 (filas por mes; bloques
+    # "Mensuales" y "Acumulados"). PDF: https://www.indec.gob.ar/uploads/informesdeprensa/ica_11_262BEEC7410A.pdf
+    ("Exportaciones totales, acum. ene-oct 2026", "2026-11-19", "cuadro1", ("actual", "expo"), 87328,
+     "Informe ICA de octubre 2026 (19/11/2026), p. 4, cuadro 1 (formato nuevo)"),
+    ("Importaciones totales, acum. ene-oct 2026", "2026-11-19", "cuadro1", ("actual", "impo"), 62760, "Ídem"),
+    ("Saldo comercial de bienes, acum. ene-oct 2026", "2026-11-19", "cuadro1", ("actual", "saldo"), 24568, "Ídem"),
+    ("Saldo comercial de bienes, acum. ene-oct 2025", "2026-11-19", "cuadro1", ("anterior", "saldo"), 6859, "Ídem"),
+    ("Exportación CyE, oct-2026", "2026-11-19", "rubros_usos", ("mes_actual", "expo_cye"), 1734,
+     "Informe ICA de octubre 2026 (19/11/2026), p. 7 (texto: 'USD 1.734 millones')"),
+    ("Importación CyL, oct-2026", "2026-11-19", "rubros_usos", ("mes_actual", "impo_cyl"), 134,
+     "Informe ICA de octubre 2026 (19/11/2026), p. 8 (texto: 'USD 134 millones')"),
 ]
 
 # ---------------------------------------------------------------------------------------------

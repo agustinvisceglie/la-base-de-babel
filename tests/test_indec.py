@@ -4,7 +4,8 @@ Tests de los lectores de cuadros del INDEC (lectores/indec.py).
 Qué hace: lee el cuadro 1 (acumulado del año) del Excel de cuadros de informes técnicos del ICA
     de distintos meses y lo compara con lo publicado en el PDF de cada informe. Cubre los meses en
     que la fila del acumulado se llama distinto: diciembre ("Total anual") y febrero ("Total
-    bimestre"; "Primer bimestre" en el PDF), más un mes común (septiembre, "Acumulado hasta...").
+    bimestre"; "Primer bimestre" en el PDF), un mes común (septiembre, "Acumulado hasta...") y el
+    formato nuevo del cuadro 1 (desde el informe del 19/11/2026: filas por mes y bloque "Acumulados").
 Fuentes: Excel de cuadros del ICA (www.indec.gob.ar/ftp/cuadros/economia/ica_cuadros_DD_MM_AA.xls;
     se usa la versión guardada en datos/crudos/indec/versiones/; si no hay, se baja con la descarga
     condicional) y los valores del cuadro 1 del PDF de cada informe,
@@ -51,6 +52,13 @@ CASOS_CUADRO1 = [
         "pdf": "https://www.indec.gob.ar/uploads/informesdeprensa/ica_10_263F42E3F39F.pdf, p. 7, fila 'Acumulado hasta septiembre'",
         "publicado": {("actual", "expo"): 77267, ("actual", "impo"): 56069, ("actual", "saldo"): 21198,
                       ("anterior", "saldo"): 6046},
+    },
+    {   # Primer informe con el formato nuevo del cuadro 1 (filas por mes; bloques "Mensuales" y "Acumulados").
+        "archivo": "ica_cuadros_19_11_26.xls",
+        "mes": pd.Timestamp("2026-10-01"),
+        "pdf": "https://www.indec.gob.ar/uploads/informesdeprensa/ica_11_262BEEC7410A.pdf, p. 4, filas 'Octubre', columnas 'Acumulados'",
+        "publicado": {("actual", "expo"): 87328, ("actual", "impo"): 62760, ("actual", "saldo"): 24568,
+                      ("anterior", "expo"): 71496, ("anterior", "impo"): 64637, ("anterior", "saldo"): 6859},
     },
 ]
 

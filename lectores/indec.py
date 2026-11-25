@@ -300,8 +300,12 @@ def leer_cuadro1_acumulado(ruta: Path) -> dict:
     0,5 por mes sumado, porque hasta 2024 los cuadros venían redondeados a millones y "los totales
     por suma pueden no coincidir por redondeo" (nota del cuadro); una fila equivocada difiere en miles.
     Devuelve {"mes", "actual": {"expo", "impo", "saldo"}, "anterior": {...}} en millones de USD.
+
+    Desde el informe del 19/11/2026 el INDEC cambió el formato del cuadro 1 (ver _leer_cuadro1_por_filas).
     """
     hoja = _hoja_por_titulo(_libro(ruta), "Cuadro 1.")
+    if any(_texto(hoja.cell_value(r, 2)) == "Mensuales" for r in range(min(6, hoja.nrows))):
+        return _leer_cuadro1_por_filas(hoja, ruta)
     etiquetas = [_texto(hoja.cell_value(r, 1)) for r in range(hoja.nrows)]
     filas_mes = {MESES_NOMBRE.index(e.lower()) + 1: r for r, e in enumerate(etiquetas) if e.lower() in MESES_NOMBRE}
     meses_con_dato = sorted(m for m, r in filas_mes.items() if isinstance(hoja.cell_value(r, 2), float))
@@ -327,6 +331,42 @@ def leer_cuadro1_acumulado(ruta: Path) -> dict:
             if abs(suma - resultado[clave][flujo]) > 0.5 * numero_mes:
                 raise ValueError(f"{ruta.name}: la fila '{etiquetas[fila]}' no es la suma de enero a "
                                  f"{MESES_NOMBRE[numero_mes - 1]} ({clave}, {flujo}: {resultado[clave][flujo]} vs {suma})")
+    return resultado
+
+
+def _leer_cuadro1_por_filas(hoja: xlrd.sheet.Sheet, ruta: Path) -> dict:
+    """Cuadro 1 con el formato del informe del 19/11/2026 en adelante: una fila por mes (columna 0 =
+    año, "2025*"; columna 1 = mes), y dos bloques de columnas, "Mensuales" (exportaciones 2,
+    importaciones 4, saldo 6) y "Acumulados" (exportaciones 7, importaciones 9, saldo 11).
+    El acumulado del año es la fila del último mes con dato, en el bloque "Acumulados"; el del año
+    anterior, la fila del mismo mes del año anterior. Mismo control que el formato viejo: el
+    acumulado tiene que ser la suma de los meses (tolerancia 0,5 por mes)."""
+    if _texto(hoja.cell_value(2, 7)) != "Acumulados" or not _texto(hoja.cell_value(3, 2)).startswith("Exportaciones"):
+        raise ValueError(f"{ruta.name}: el cuadro 1 no tiene la estructura esperada (Mensuales / Acumulados)")
+    columnas_mes = {"expo": 2, "impo": 4, "saldo": 6}
+    columnas_acumulado = {"expo": 7, "impo": 9, "saldo": 11}
+    filas, anio = {}, None
+    for r in range(hoja.nrows):
+        marca = re.match(r"(\d{4})", _texto(hoja.cell_value(r, 0)))
+        if marca:
+            anio = int(marca.group(1))
+        mes = _texto(hoja.cell_value(r, 1)).lower()
+        if anio and mes in MESES_NOMBRE and isinstance(hoja.cell_value(r, 2), float):
+            filas[(anio, MESES_NOMBRE.index(mes) + 1)] = r
+    anio_actual = max(a for a, _ in filas)
+    numero_mes = max(m for a, m in filas if a == anio_actual)
+    resultado = {"mes": pd.Timestamp(anio_actual, numero_mes, 1)}
+    for clave, anio in (("actual", anio_actual), ("anterior", anio_actual - 1)):
+        meses = [m for a, m in filas if a == anio and m <= numero_mes]
+        if sorted(meses) != list(range(1, numero_mes + 1)):
+            raise ValueError(f"{ruta.name}: meses con dato inesperados en el cuadro 1 para {anio}: {sorted(meses)}")
+        fila = filas[(anio, numero_mes)]
+        resultado[clave] = {flujo: float(hoja.cell_value(fila, c)) for flujo, c in columnas_acumulado.items()}
+        for flujo, c in columnas_mes.items():
+            suma = sum(float(hoja.cell_value(filas[(anio, m)], c)) for m in range(1, numero_mes + 1))
+            if abs(suma - resultado[clave][flujo]) > 0.5 * numero_mes:
+                raise ValueError(f"{ruta.name}: el acumulado de {anio} no es la suma de enero a "
+                                 f"{MESES_NOMBRE[numero_mes - 1]} ({flujo}: {resultado[clave][flujo]} vs {suma})")
     return resultado
 
 
@@ -385,7 +425,7 @@ def leer_cuadro_rubros_usos(ruta: Path) -> dict:
     """
     libro = _libro(ruta)
     expo = _hoja_por_patron(libro,r"^Cuadro \d+\. Exportaciones por (grandes|principales) rubros(\.| y principales subrubros)")
-    impo = _hoja_por_patron(libro, r"^Cuadro \d+\. - Importaciones, según usos económicos")
+    impo = _hoja_por_patron(libro, r"^Cuadro \d+\.( -)? Importaciones, según usos económicos")  # sin " - " desde el 19/11/2026
 
     def fila(hoja, columna, prefijo):
         return next(r for r in range(hoja.nrows) if _texto(hoja.cell_value(r, columna)).startswith(prefijo))
