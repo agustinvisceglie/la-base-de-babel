@@ -26,6 +26,8 @@ Portal de la Secretaría de Energía (SE), datos.energia.gob.ar. Registro de ver
 | Producción de pozos de gas y petróleo no convencional | ídem / `b5b58cdc-9e07-41f9-b392-fb9ec68b0725` | 22/10/2026 | Vaca Muerta |
 | Producción de pozos de gas y petróleo 2026 (todos los pozos) | ídem / `fb7a47a0-cba9-4667-a004-6f6c1c346c23` | 18/11/2026 | Controles |
 | Producción de pozos de gas y petróleo 2024 (todos los pozos) | ídem / `94d82d18-488b-434c-806d-ee5e053ce1cd` (el más reciente de los dos recursos de 2024) | 18/11/2026 | Controles |
+| Producción de pozos de gas y petróleo 2024, recurso anterior (todos los pozos) | ídem / `43a09dce-1742-44d0-bc13-f193deaab563` | 03/10/2026 | Diagnóstico de 09/2024 (solo evidencia) |
+| Producción de pozos de gas y petróleo 2024, DDJJ abiertas y cerradas (todos los pozos) | ídem / `0a352dee-8b4e-4e95-b01e-5b8082ce22ac` | 18/11/2026 | Diagnóstico de 09/2024 (solo evidencia) |
 | Producción de pozos de gas y petróleo 2015 (todos los pozos) | ídem / `e375aa35-fd8d-41d6-aa0c-e6879ca567a1` | 12/11/2026 | Controles |
 | SESCO, producción promedio diaria por cuenca, petróleo y gas | `590d1284-fd6d-4686-afd8-b3da5d90a6e9` / `570015c9-…` y `6a7866a1-…` | 21/12/2025 (petróleo) y 18/11/2026 (gas) | Controles |
 
@@ -111,7 +113,18 @@ Los otros meses de los tres años coinciden.
 - **Qué falta:** 111 pozos shale de la formación VMUT, todos de una misma operadora, tienen producción de petróleo en agosto y octubre de 2024 y ningún registro en septiembre. En agosto produjeron 160.450 m³ (32,6 kbbl/d) y en octubre 141.803 m³ (28,8 kbbl/d): el mismo orden que el faltante. Los registros shale por mes son 2.528 en agosto, 2.410 en septiembre y 2.589 en octubre.
 - **La serie agregada de la SE sí incluye ese volumen.** No se encontró un dato oficial por pozo con el que completar el mes.
 - **No se completó ni se estimó nada.** La serie de Vaca Muerta lo marca en `control_cobertura`, como a 06/2015, 01/2019 y 03/2019. En septiembre de 2024 da 385,3 kbbl/d, contra 402,3 en agosto y 421,4 en octubre.
-- **No revisado (requiere bajar más archivos):** el otro recurso de 2024 en el portal (`43a09dce-1742-44d0-bc13-f193deaab563`, del 03/10/2026) y la variante "DDJJ abiertas y cerradas" de 2024 (`0a352dee-8b4e-4e95-b01e-5b8082ce22ac`, 307,6 MB, del 18/11/2026).
+- **Las otras dos versiones de 2024 en el portal** (bajadas el 18/11/2026 solo como evidencia; no se usan en ninguna serie):
+  - **Recurso anterior** (`43a09dce-1742-44d0-bc13-f193deaab563`, publicado el 03/10/2026, sha256 `2c3e2f6ec268…`). Es igual al del 18/11 en todos los meses: el mismo faltante en 09/2024.
+  - **Variante "DDJJ abiertas y cerradas"** (`0a352dee-8b4e-4e95-b01e-5b8082ce22ac`, publicada el 18/11/2026, sha256 `5216342c5c3a…`, 307,6 MB). **Trae septiembre de 2024 de los 111 pozos que faltan.**
+- **Qué agrega esa variante:**
+  - 159 filas que no están en el recurso del 18/11. Todas son de 09/2024 y de una sola operadora (código `SHE` de la SE):
+    - 150 son NO CONVENCIONAL shale y suman 157.933,4 m³ de petróleo y 16.174,0 miles de m³ de gas: exactamente el faltante.
+    - Las otras 9 (5 CONVENCIONAL y 4 SIN RESERVORIO) no tienen producción.
+    - De esos 150, los 111 pozos con producción en agosto y octubre aportan 150.992,5 m³. Su fecha de carga es el 17/10/2024.
+  - En las demás filas, las dos versiones son iguales.
+  - **Con esa variante, el total de petróleo de cada uno de los 12 meses de 2024 coincide con la serie agregada** (diferencia 0,0 m³).
+- **Lectura (inferida, no documentada por la SE):** la serie agregada se arma con las declaraciones juradas abiertas y cerradas, y los otros archivos por pozo (el anual "normal" y el no convencional) traen solo las cerradas. La declaración de septiembre de 2024 de esa operadora estaría abierta.
+- **No se completó nada.** Cambiar la fuente de los datos por pozo a la variante "DDJJ abiertas y cerradas" es una decisión pendiente de Agustín. Los otros meses que no cierran (01/2007, 06/2015, 01/2019 y 03/2019) no se contrastaron con esa variante.
 
 ## Corte
 
