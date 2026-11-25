@@ -53,7 +53,6 @@ import requests
 # Carpetas del repositorio (este archivo está en <raiz>/comun/)
 RAIZ = Path(__file__).resolve().parents[1]
 CRUDOS = RAIZ / "datos" / "crudos"
-PROCESADOS = RAIZ / "datos" / "procesados"  # hasta la migración de los Pasos 3b y 3c
 REGISTRO_VERSIONES = RAIZ / "datos" / "registros" / "versiones_crudos.csv"
 
 COLUMNAS_REGISTRO = ["organismo", "recurso", "archivo", "version", "url", "fecha_publicacion", "origen_fecha",
