@@ -15,7 +15,8 @@ Qué hace:
       Last-Modified o el ETag cambiaron respecto de la última versión registrada. No deja una copia
       "vigente": solo la versión comprimida. Si la fuente no informa ninguno de los dos (regla 8 del
       instructivo, precisada el 25/11/2026): si pesa menos de 50 MB, se baja, se compara el hash y,
-      si ya estaba, solo se anota la verificación; si cambió, se guarda con la fecha de descarga
+      si ya estaba, solo se anota la verificación en el registro de descargas de la corrida (no en
+      versiones_crudos.csv); si cambió, se guarda con la fecha de descarga
       (origen_fecha lo dice). Si es grande o no se sabe cuánto pesa, frena sin bajar.
     - revisar_http() y autorizar_descarga(): antes de bajar, qué cambió y cuánto pesa; frenan si la
       fuente no responde, si no informa fecha ni ETag y es grande o de tamaño desconocido, o si lo
@@ -345,8 +346,10 @@ def _descargar_sin_fecha(url: str, logico: Path, relativo: str, organismo: str, 
                          metadatos: dict, ultima: pd.Series | None) -> dict:
     """Regla 8 (a) y (b): la fuente no informa fecha de publicación ni ETag.
     - Si se sabe que pesa menos de 50 MB: se baja y se compara el hash con las versiones guardadas.
-      Si es una versión que ya estaba, solo se anota la verificación (una fila en el registro que
-      apunta a esa versión); si cambió, se guarda la versión nueva con la fecha de descarga.
+      Si es una versión que ya estaba, solo se anota la verificación en el registro de descargas de
+      la corrida (lo que devuelve esta función, con verificado_sin_cambios = True), no en
+      versiones_crudos.csv: ese registro cambia solo cuando la fuente publica algo nuevo (criterio
+      aprobado por Agustín el 25/11/2026). Si cambió, se guarda la versión nueva con la fecha de descarga.
     - Si es grande o no se puede saber cuánto pesa: frena sin bajar."""
     tamanio = tamanio_conocido(metadatos, ultima)
     if tamanio is None or tamanio >= LIMITE_SIN_FECHA_BYTES:
@@ -359,11 +362,9 @@ def _descargar_sin_fecha(url: str, logico: Path, relativo: str, organismo: str, 
     resultado = guardar_version(registro, None, origen_fecha=ORIGEN_SIN_FECHA, organismo=organismo,
                                 recurso=recurso, origen=temporal)
     temporal.unlink()  # el contenido quedó como versión comprimida (nueva o ya guardada)
-    if not resultado["version_nueva"]:
-        _anotar({"organismo": organismo, "recurso": recurso, "archivo": relativo, "version": resultado["version"],
-                 "url": url, "fecha_publicacion": None, "origen_fecha": ORIGEN_SIN_FECHA_SIN_CAMBIOS, "etag": None,
-                 "fecha_descarga": registro["fecha_descarga"], "bytes": registro["bytes"], "sha256": registro["sha256"]})
-    return {**resultado, "descargado": True}
+    sin_cambios = not resultado["version_nueva"]
+    return {**resultado, "descargado": True, "verificado_sin_cambios": sin_cambios,
+            "origen_fecha": ORIGEN_SIN_FECHA_SIN_CAMBIOS if sin_cambios else ORIGEN_SIN_FECHA}
 
 
 def revisar_http(archivos: list[tuple[str, str, str]]) -> pd.DataFrame:

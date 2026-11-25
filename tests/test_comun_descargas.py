@@ -7,7 +7,8 @@ Qué hace: verifica que
     - la descarga condicional baje solo si cambió el Last-Modified (o el ETag), no deje copia
       "vigente", y frene sin bajar si la fuente no responde;
     - una fuente sin Last-Modified ni ETag (regla 8): si es chica (menos de 50 MB) se baje, se compare
-      el hash y, si no cambió, solo se anote; si es grande o no se sabe cuánto pesa, frene sin bajar;
+      el hash y, si no cambió, solo se anote en el registro de la corrida (no en versiones_crudos.csv);
+      si es grande o no se sabe cuánto pesa, frene sin bajar;
     - los modos sin descargar y crudos al AAAA-MM-DD no usen internet y elijan la versión correcta
       (crudos al = la última versión BAJADA hasta esa fecha, según la fecha de descarga);
     - las versiones viejas sin comprimir se compriman verificando el hash antes de borrar el original;
@@ -167,8 +168,12 @@ class TestDescargaCondicional(BaseTemporal):
         self.contenido["actual"] = b"anio,valor\n2026,7\n"
         tercera, _ = self.correr(sin_fecha)                       # cambió: versión nueva
         self.assertTrue(tercera["version_nueva"])
+        # La verificación sin cambios va al registro de la corrida (lo que devuelve), no al de versiones.
+        self.assertTrue(segunda["verificado_sin_cambios"])
+        self.assertEqual(segunda["origen_fecha"], d.ORIGEN_SIN_FECHA_SIN_CAMBIOS)
+        self.assertFalse(tercera["verificado_sin_cambios"])
         registro = self.registro()
-        self.assertEqual(list(registro["origen_fecha"]), [d.ORIGEN_SIN_FECHA, d.ORIGEN_SIN_FECHA_SIN_CAMBIOS, d.ORIGEN_SIN_FECHA])
+        self.assertEqual(list(registro["origen_fecha"]), [d.ORIGEN_SIN_FECHA, d.ORIGEN_SIN_FECHA])
         self.assertTrue(registro["fecha_publicacion"].isna().all())
         self.assertEqual(len(list((self.raiz / "datos" / "crudos" / "indec" / "versiones").iterdir())), 2)
 
