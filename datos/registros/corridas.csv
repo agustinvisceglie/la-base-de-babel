@@ -2,3 +2,4 @@ inicio,fin,duracion_segundos,comando,modo,armadores,armadores_escritos,armadores
 2026-11-25 11:36:35,2026-11-25 11:36:35,0.0,actualizar.py,normal,,,,,,0,0,ok
 2026-11-25 11:51:25,2026-11-25 11:51:25,0.0,actualizar.py --sin-descargar,sin descargar,,,,,,0,0,ok
 2026-11-25 12:28:39,2026-11-25 12:28:53,14.5,actualizar.py --crudos-al 2026-11-18,crudos al 2026-11-18,bloques/sector_externo/comercio_exterior.py; bloques/energia/balanza_energetica.py,bloques/sector_externo/comercio_exterior.py; bloques/energia/balanza_energetica.py,,,,0,0,ok
+2026-11-25 12:51:52,2026-11-25 12:52:58,66.2,actualizar.py --respaldar,normal,bloques/sector_externo/comercio_exterior.py; bloques/energia/balanza_energetica.py,bloques/sector_externo/comercio_exterior.py; bloques/energia/balanza_energetica.py,,,,0,20,ok

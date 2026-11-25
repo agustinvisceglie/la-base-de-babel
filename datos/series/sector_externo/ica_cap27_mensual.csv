@@ -259,9 +259,9 @@ fecha,expo_cap27_musd,impo_cap27_musd,saldo_cap27_musd,fuente
 2025-06-01,960.49023922,337.95439106,622.53584816,INDEC: acum. ene-06/2025 (acum. ene-07 menos mes 07) del informe 20/08/2026 - acum. ene-05/2025 (acum. ene-06 menos mes 06) del informe 20/07/2026
 2025-07-01,654.67017477,642.89966978,11.77050499,INDEC: acum. ene-07/2025 (acum. ene-08 menos mes 08) del informe 18/09/2026 - acum. ene-06/2025 (acum. ene-07 menos mes 07) del informe 20/08/2026
 2025-08-01,949.48594026,288.71617417,660.76976609,INDEC: acum. ene-08/2025 (acum. ene-09 menos mes 09) del informe 19/10/2026 - acum. ene-07/2025 (acum. ene-08 menos mes 08) del informe 18/09/2026
-2025-09-01,841.87911788,150.28125783,691.59786005,INDEC: acum. ene-09/2025 del informe 19/10/2026 - acum. ene-08/2025 (acum. ene-09 menos mes 09) del informe 19/10/2026
-2025-10-01,797.66779805,181.96944217,615.69835588,INDEC: acum. ene-10/2025 (acum. ene-11 menos mes 11) del informe 18/12/2025 - acum. ene-09/2025 del informe 19/10/2026
-2025-11-01,903.42249487,128.46411130,774.95838357,INDEC: acum. ene-11/2025 (acum. ene-12 menos mes 12) del informe 20/01/2026 - acum. ene-10/2025 (acum. ene-11 menos mes 11) del informe 18/12/2025
+2025-09-01,841.87911788,150.28125783,691.59786005,INDEC: acum. ene-09/2025 (acum. ene-10 menos mes 10) del informe 19/11/2026 - acum. ene-08/2025 (acum. ene-09 menos mes 09) del informe 19/10/2026
+2025-10-01,797.66779805,181.96944217,615.69835588,INDEC: acum. ene-10/2025 del informe 19/11/2026 - acum. ene-09/2025 (acum. ene-10 menos mes 10) del informe 19/11/2026
+2025-11-01,903.42249487,128.46411130,774.95838357,INDEC: acum. ene-11/2025 (acum. ene-12 menos mes 12) del informe 20/01/2026 - acum. ene-10/2025 del informe 19/11/2026
 2025-12-01,929.61715731,160.58175057,769.03540674,INDEC: acum. ene-12/2025 del informe 20/01/2026 - acum. ene-11/2025 (acum. ene-12 menos mes 12) del informe 20/01/2026
 2026-01-01,787.42981429,130.48802392,656.94179037,INDEC: acum. ene-01/2026 (acum. ene-02 menos mes 02) del informe 19/03/2026
 2026-02-01,524.58608587,118.11192449,406.47416138,INDEC: acum. ene-02/2026 (acum. ene-03 menos mes 03) del informe 20/04/2026 - acum. ene-01/2026 (acum. ene-02 menos mes 02) del informe 19/03/2026
@@ -271,4 +271,5 @@ fecha,expo_cap27_musd,impo_cap27_musd,saldo_cap27_musd,fuente
 2026-06-01,1256.77313653,781.01447714,475.75865939,INDEC: acum. ene-06/2026 (acum. ene-07 menos mes 07) del informe 20/08/2026 - acum. ene-05/2026 (acum. ene-06 menos mes 06) del informe 20/07/2026
 2026-07-01,1326.50176572,604.54738329,721.95438243,INDEC: acum. ene-07/2026 (acum. ene-08 menos mes 08) del informe 18/09/2026 - acum. ene-06/2026 (acum. ene-07 menos mes 07) del informe 20/08/2026
 2026-08-01,1256.66315085,503.18628765,753.47686320,INDEC: acum. ene-08/2026 (acum. ene-09 menos mes 09) del informe 19/10/2026 - acum. ene-07/2026 (acum. ene-08 menos mes 08) del informe 18/09/2026
-2026-09-01,1586.23646812,145.72432978,1440.51213834,INDEC: acum. ene-09/2026 del informe 19/10/2026 - acum. ene-08/2026 (acum. ene-09 menos mes 09) del informe 19/10/2026
+2026-09-01,1557.97725194,169.41187678,1388.56537516,INDEC: acum. ene-09/2026 (acum. ene-10 menos mes 10) del informe 19/11/2026 - acum. ene-08/2026 (acum. ene-09 menos mes 09) del informe 19/10/2026
+2026-10-01,1546.96635333,110.33297483,1436.63337850,INDEC: acum. ene-10/2026 del informe 19/11/2026 - acum. ene-09/2026 (acum. ene-10 menos mes 10) del informe 19/11/2026
