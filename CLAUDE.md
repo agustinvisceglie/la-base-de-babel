@@ -23,7 +23,7 @@ Repositorio de datos y código de "Sobre Modelos y Tumbas", publicación de Agus
 - Toda serie tiene documentado: organismo, ID o URL exacta, unidad, frecuencia y fecha de descarga.
 - Las unidades van en el nombre de la columna (`_musd` = millones de USD, `_kbbl_d` = miles de barriles por día, `_mm3_d` = millones de m3 por día).
 - Las descargas originales van a `datos/crudos/` y no se modifican; la limpieza genera archivos nuevos en `datos/procesados/`.
-- Cuando una serie tenga valores estimados (por ejemplo, por secreto estadístico o por faltantes), marcarlos en una columna 'fuente' y, en toda nota o gráfico que los use o los cite, incluir una aclaración que diga qué se estimó y cómo.
+- Solo estimaciones aprobadas por Agustín, marcadas en la columna 'fuente', con la aclaración en toda nota o gráfico que las use.
 
 ## Controles obligatorios antes de dar por bueno un número
 1. Unidades: millones vs. miles, m3 vs. barriles, mensual vs. acumulado.
@@ -33,7 +33,7 @@ Repositorio de datos y código de "Sobre Modelos y Tumbas", publicación de Agus
 5. Contrastar al menos un dato por serie contra el informe oficial publicado (ej.: el informe técnico del INDEC) y dejar la comparación en el informe de validación.
 
 ## Reglas de trabajo
-- No decidir criterios económicos. Ante cualquier decisión de definición, serie, agrupación, método, período o unidad: frenar, presentar las opciones con sus pros y contras, y esperar la decisión de Agustín (que la valida en el chat del proyecto contra al menos 5 fuentes profesionales).
+- No decidir criterios económicos: qué elecciones abarca está en la regla 2 de "Reglas permanentes". Frenar, presentar las opciones con sus pros y contras, y esperar la decisión de Agustín (que la valida en el chat del proyecto contra al menos 5 fuentes profesionales).
 - Todo lo que se entrega es auditado en el chat del proyecto: citar URL/ID y cuadro de cada dato, separar lo verificado de lo supuesto, y antes de afirmar que un dato no existe listar todas las fuentes revisadas.
 - Seguir la convención del INDEC, la Secretaría de Energía, el BCRA y las consultoras, salvo razón fuerte y documentada.
 
@@ -57,9 +57,12 @@ Repositorio de datos y código de "Sobre Modelos y Tumbas", publicación de Agus
    - un control que falla frena el armado del bloque, salvo que haya una excepción aprobada en `datos/registros/excepciones.csv`;
    - las excepciones las propone Code y las aprueba Agustín. Code **no** las da de alta por su cuenta.
 7. **Nada de "parches":** si para que algo cierre hace falta tocar un dato puntual, eso es una decisión. Frenar.
+8. **Descargas grandes:** si un paso necesita bajar más de 1 GB en total, avisar el tamaño estimado antes de bajarlo y esperar el ok de Agustín. Si el portal no informa la fecha de publicación de un recurso, no se baja a ciegas: frenar.
+9. **Credenciales:** contraseñas, códigos, CAPTCHAs, autenticaciones y aceptación de términos los resuelve Agustín. Si aparecen, frenar.
+10. **Contradicciones:** si una instrucción contradice el instructivo o los criterios, frenar y señalarlo; no elegir cuál vale.
 
 ## Forma de trabajar
 - Antes de hacer `git push`, mostrarle a Agustín qué cambió y esperar su ok.
 - Commits chicos, con mensajes en español que digan qué se hizo.
-- Si una fuente no está disponible o un dato no cierra, decirlo; no inventar ni estimar sin avisar.
+- Si una fuente no está disponible o un dato no cierra, decirlo; no inventar ni estimar sin aprobación.
 - Los CSV para gráficos (Datawrapper) usan punto decimal, coma como separador de columnas y una fila por fecha. Datawrapper después los muestra con formato argentino.
