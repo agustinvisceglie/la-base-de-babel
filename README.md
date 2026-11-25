@@ -6,25 +6,31 @@ Datos, métodos y código de **[Sobre Modelos y Tumbas](https://sobremodelosytum
 
 ## Qué hay acá
 
-Cada nota de la publicación que usa datos tiene su carpeta con el código que baja, procesa y grafica las series, para que cualquiera pueda revisar y reproducir los números.
+Una base de series económicas y energéticas de la Argentina, armadas una sola vez con un comando (`actualizar.py`) a partir de las fuentes oficiales, con sus controles y su catálogo (`catalogo_series.csv`). Cada nota de la publicación tiene su carpeta y lee de esa base, para que cualquiera pueda revisar y reproducir los números.
 
 ## Estructura
 
 ```
+actualizar.py      un comando: baja (si cambió), arma y controla la base; regenera el catálogo
+catalogo_series.csv  una fila por serie: fuente, unidad, criterio, inicio, fin, uso y estado de validación
+comun/             código común: descargas y versiones, controles, catálogo, respaldo
+lectores/          uno por organismo: bajan y leen los archivos tal como los publica la fuente
+bloques/           armadores por bloque (sector externo, energía, ...): aplican los criterios y controlan
 datos/
-  crudos/          descargas originales de cada fuente (no se suben: se regeneran con los scripts)
-  procesados/      series limpias, listas para analizar y graficar
-  validacion/      controles de las series genéricas
-scripts/           funciones reutilizables de descarga y limpieza, por fuente
-series/            armadores de series genéricas, no atadas a una nota (ubicación provisoria)
-notas/             una carpeta por nota publicada, reproducible con un comando
-tests/             tests de los lectores de cuadros (python -m unittest discover -s tests -v)
+  crudos/          versiones comprimidas de cada descarga (no se suben: el hash queda en registros/)
+  series/          series limpias por bloque, listas para analizar y graficar
+  validacion/      controles e informes de validación por bloque
+  registros/       versiones de los crudos, corridas, excepciones, auditorías y respaldos
+notas/             una carpeta por nota: lee la base y arma sus gráficos y cifras
+tests/             tests de lectores, controles y migración (python -m unittest discover -s tests -v)
 requirements.txt   paquetes de Python con sus versiones exactas
 ```
 
+Para armar la base: `python actualizar.py` (todo), `--bloque energia`, `--sin-descargar` o `--crudos-al AAAA-MM-DD` (con las versiones de los crudos que había ese día).
+
 ## Fuentes
 
-Solo datos públicos: INDEC, BCRA, Secretaría de Energía y la API de Series de Tiempo de datos.gob.ar, entre otras. Cada script indica de dónde sale cada serie.
+Solo datos públicos: INDEC, BCRA, Secretaría de Energía y la API de Series de Tiempo de datos.gob.ar, entre otras. El catálogo indica de dónde sale cada serie, y cada lector y cada armador lo dice en su encabezado.
 
 ## Autor
 

@@ -222,6 +222,18 @@ class TestDescargaCondicional(BaseTemporal):
         self.assertEqual(d.leer_bytes(ultima["version"]).read(), b"anio,valor\n2026,9\n")
         self.assertEqual(d.leer_bytes(al_31_10["version"]).read(), b"anio,valor\n2026,1\n")
 
+    def test_crudos_al_con_hora(self):
+        """--crudos-al acepta "AAAA-MM-DD HH:MM": distingue dos descargas del mismo día."""
+        self.ahora = pd.Timestamp("2026-11-25 10:48")
+        self.correr({"fecha_publicacion": "2026-11-24T10:00:00+00:00", "etag": '"a"', "bytes": 18})
+        self.contenido["actual"] = b"anio,valor\n2026,5\n"
+        self.ahora = pd.Timestamp("2026-11-25 12:52")
+        self.correr({"fecha_publicacion": "2026-11-25T12:00:00+00:00", "etag": '"b"', "bytes": 18})
+        d.configurar(crudos_al="2026-11-25 10:59")
+        self.assertEqual(d.leer_bytes(d.descargar_condicional(URL, "indec", "prueba.xls")["version"]).read(), b"anio,valor\n2026,1\n")
+        d.configurar(crudos_al="2026-11-25")
+        self.assertEqual(d.leer_bytes(d.descargar_condicional(URL, "indec", "prueba.xls")["version"]).read(), b"anio,valor\n2026,5\n")
+
     def test_crudos_al_usa_la_fecha_de_descarga_no_la_de_publicacion(self):
         # Publicada el 20/10 pero bajada recién el 05/11: al 31/10 no la teníamos.
         self.ahora = pd.Timestamp("2026-11-05 09:00")

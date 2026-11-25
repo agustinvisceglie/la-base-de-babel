@@ -31,7 +31,7 @@ Columnas de datos/registros/versiones_crudos.csv (COLUMNAS_REGISTRO): organismo,
     fecha_publicacion, origen_fecha (de dónde sale la fecha), etag, fecha_descarga, bytes y sha256
     (del archivo original).
 
-Fuentes: cualquiera. Lo usan los lectores (lectores/) y, hasta que se migren, scripts/.
+Fuentes: cualquiera. Lo usan los lectores (lectores/).
 Genera: datos/crudos/<organismo>/versiones/ (no va a Git) y datos/registros/versiones_crudos.csv (va a Git).
 """
 
@@ -240,20 +240,25 @@ def guardar_version(registro: dict, fecha_publicacion: str | None, origen_fecha:
 
 def version_registrada(archivo: Path | str, al: str | None = None) -> dict:
     """La última versión BAJADA de un crudo (por fecha de descarga), o la última bajada hasta `al`
-    ("AAAA-MM-DD", inclusive): reconstruye lo que teníamos en esa fecha (criterio aprobado por
-    Agustín el 25/11/2026). Frena si no hay ninguna o si falta la copia."""
+    ("AAAA-MM-DD" o "AAAA-MM-DD HH:MM", inclusive): reconstruye lo que teníamos en ese momento
+    (criterio aprobado por Agustín el 25/11/2026). Frena si no hay ninguna o si falta la copia."""
     archivo = Path(archivo)
     logico = (archivo.relative_to(RAIZ) if archivo.is_absolute() else archivo).as_posix()
     filas = leer_registro()
     filas = filas[filas["archivo"] == logico]
     if al:
-        filas = filas[filas["fecha_descarga"].str[:10] <= al]
+        filas = filas[filas["fecha_descarga"].str[:len(al)] <= al]
     if filas.empty:
         raise DescargaFrenada(f"No hay ninguna versión registrada de {logico}" + (f" bajada hasta el {al}" if al else ""))
     ultima = filas.sort_values("fecha_descarga", kind="stable").iloc[-1]
     if not (RAIZ / ultima["version"]).exists():
         raise DescargaFrenada(f"Falta la copia {ultima['version']} registrada para {logico}")
     return {**ultima.to_dict(), "descargado": False}
+
+
+def sin_red() -> bool:
+    """¿La corrida es sin internet (--sin-descargar o --crudos-al)?"""
+    return bool(_MODO["sin_descargar"] or _MODO["crudos_al"])
 
 
 def leer_bytes(version: Path | str) -> io.BytesIO:
@@ -304,8 +309,13 @@ def _misma_publicacion(fila: pd.Series, metadatos: dict) -> bool:
     return bool(metadatos["etag"]) and pd.notna(registrada) and str(registrada) == metadatos["etag"]
 
 
-def descargar_condicional(url: str, organismo: str, nombre: str, recurso: str | None = None) -> dict:
+def descargar_condicional(url: str, organismo: str, nombre: str, recurso: str | None = None,
+                          obtener_metadatos=None, timeout: int = 600) -> dict:
     """Baja `url` solo si cambió, y la guarda como versión comprimida (sin copia "vigente").
+
+    `obtener_metadatos(url)` devuelve {"fecha_publicacion", "etag", "bytes"} (y opcionalmente
+    "origen", de dónde sale la fecha) o None si la fuente no responde. Por defecto, los encabezados
+    HTTP (metadatos_http); el lector de la SE pasa los del portal CKAN.
 
     - Si la corrida es sin descargar o con crudos al AAAA-MM-DD, no usa internet: devuelve la versión
       registrada que corresponde.
@@ -318,7 +328,7 @@ def descargar_condicional(url: str, organismo: str, nombre: str, recurso: str | 
     relativo = logico.relative_to(RAIZ).as_posix()
     if _MODO["sin_descargar"] or _MODO["crudos_al"]:
         return version_registrada(relativo, _MODO["crudos_al"])
-    metadatos = metadatos_http(url)
+    metadatos = (obtener_metadatos or metadatos_http)(url)
     if metadatos is None:
         raise DescargaFrenada(f"La fuente no respondió los encabezados de {url}: {nombre} queda sin verificar.")
     ultima = _ultima_fila(relativo)
@@ -327,9 +337,10 @@ def descargar_condicional(url: str, organismo: str, nombre: str, recurso: str | 
     if ultima is not None and _misma_publicacion(ultima, metadatos) and (RAIZ / ultima["version"]).exists():
         return {**ultima.drop(labels="_orden").to_dict(), "descargado": False}
     temporal = logico.with_name(logico.name + ".descarga")
-    registro = descargar(url, temporal)
+    registro = descargar(url, temporal, timeout=timeout)
     registro["archivo"] = relativo
-    origen_fecha = "encabezado Last-Modified" if metadatos["fecha_publicacion"] else "sin Last-Modified: se usa la de descarga (cambio detectado por ETag)"
+    origen_fecha = metadatos.get("origen") or ("encabezado Last-Modified" if metadatos["fecha_publicacion"]
+                                               else "sin Last-Modified: se usa la de descarga (cambio detectado por ETag)")
     resultado = guardar_version(registro, metadatos["fecha_publicacion"], origen_fecha=origen_fecha,
                                 etag=metadatos["etag"], organismo=organismo, recurso=recurso, origen=temporal)
     temporal.unlink()  # el archivo descargado ya quedó como versión comprimida (no se guarda copia "vigente")
@@ -371,7 +382,7 @@ def _descargar_sin_fecha(url: str, logico: Path, relativo: str, organismo: str, 
             "origen_fecha": ORIGEN_SIN_FECHA_SIN_CAMBIOS if sin_cambios else ORIGEN_SIN_FECHA}
 
 
-def revisar_http(archivos: list[tuple[str, str, str]]) -> pd.DataFrame:
+def revisar_http(archivos: list[tuple[str, str, str]], obtener_metadatos=None) -> pd.DataFrame:
     """Sin bajar nada: para cada (organismo, nombre, url), compara los encabezados con la última
     versión registrada. estado: "sin cambios", "cambió", "nuevo" o "sin respuesta"; si la fuente no
     informa Last-Modified ni ETag, "sin fecha, chica" (menos de 50 MB: se baja y se compara el hash)
@@ -380,7 +391,7 @@ def revisar_http(archivos: list[tuple[str, str, str]]) -> pd.DataFrame:
     for organismo, nombre, url in archivos:
         relativo = (CRUDOS / organismo / nombre).relative_to(RAIZ).as_posix()
         ultima = _ultima_fila(relativo)
-        metadatos = metadatos_http(url)
+        metadatos = (obtener_metadatos or metadatos_http)(url)
         bytes_registrados = None if ultima is None else int(ultima["bytes"])
         if metadatos is None:
             estado, tamanio = "sin respuesta", bytes_registrados

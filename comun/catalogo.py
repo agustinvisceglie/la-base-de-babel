@@ -24,8 +24,9 @@ Columnas del catálogo (COLUMNAS_CATALOGO): las de la propuesta de arquitectura 
     (base o control), discontinuada y con_reservas (criterios, sección 10), y rotulo (oficial, no
     oficial, no oficial (académica), regulado o estimación propia; regla 4 del instructivo). inicio
     es el primer dato no vacío de la serie, leído del archivo.
-Columnas de datos/registros/auditorias.csv (COLUMNAS_AUDITORIAS): fecha, alcance (id de una serie, un
-    bloque o "todo"), commit, resultado (aprobada, con observaciones o rechazada) y notas.
+Columnas de datos/registros/auditorias.csv (COLUMNAS_AUDITORIAS): fecha, alcance ("todo", un bloque, un
+    archivo del bloque como "energia.produccion_vaca_muerta_mensual", o el id de una serie), commit,
+    resultado (aprobada, con observaciones o rechazada) y notas.
 
 Fuentes: ninguna (lee lo que declaran los armadores y los archivos de datos/series/).
 Genera: catalogo_series.csv (lo escribe actualizar.py).
@@ -207,8 +208,15 @@ def _inicio_fin(ruta: Path, columna: str) -> tuple[str, str]:
     return (fechas.iloc[0], fechas.iloc[-1]) if len(fechas) else ("", "")
 
 
+def alcance_aplica(alcance: str, serie_id: str) -> bool:
+    """El alcance de una auditoría cubre la serie si es "todo", su bloque ("energia"), su archivo
+    ("energia.produccion_vaca_muerta_mensual") o la serie misma (id completo)."""
+    return alcance == "todo" or serie_id == alcance or serie_id.startswith(f"{alcance}.")
+
+
 def _estado_validacion(serie_id: str, bloque: str, controles_a_revisar: str, auditorias: pd.DataFrame) -> str:
-    aplican = auditorias[auditorias["alcance"].isin([serie_id, bloque, "todo"]) & (auditorias["resultado"] == "aprobada")]
+    aplica = auditorias["alcance"].fillna("").map(lambda a: alcance_aplica(a, serie_id))
+    aplican = auditorias[aplica & (auditorias["resultado"] == "aprobada")]
     if len(aplican):
         ultima = aplican.iloc[-1]
         return f"auditada {ultima['fecha']}, {ultima['commit']}"

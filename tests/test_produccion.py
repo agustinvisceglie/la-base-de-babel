@@ -1,5 +1,5 @@
 """
-Tests del armador de series de producción (series/produccion_hidrocarburos.py).
+Tests del armador de producción (bloques/energia/produccion.py).
 
 Qué hace: verifica que
     - el control de corte impida que un mes posterior al último mes completo de la fuente oficial
@@ -23,7 +23,7 @@ sys.path.insert(0, str(RAIZ))
 
 import pandas as pd
 
-from series.produccion_hidrocarburos import verificar_corte
+from bloques.energia.produccion import verificar_corte
 
 
 def serie_mensual(desde: str, hasta: str) -> pd.DataFrame:
@@ -49,7 +49,7 @@ if __name__ == "__main__":
 # ---------------------------------------------------------------------------------------------
 # Paso 1: clasificación de cada pozo según la publicación más reciente de la SE
 # ---------------------------------------------------------------------------------------------
-from series.produccion_hidrocarburos import (atributos_claves, clasificacion_por_publicacion, clasificacion_vigente,
+from bloques.energia.produccion import (atributos_claves, clasificacion_por_publicacion, clasificacion_vigente,
                                              compactar_publicacion, reclasificaciones, sumas_mensuales)
 
 

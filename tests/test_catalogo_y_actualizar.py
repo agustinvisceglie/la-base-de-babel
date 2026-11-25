@@ -86,6 +86,13 @@ class TestCatalogoDelRepositorio(unittest.TestCase):
 
 class TestDeclaracionesYDependencias(unittest.TestCase):
 
+    def test_alcance_de_una_auditoria(self):
+        serie = "energia.produccion_vaca_muerta_mensual.petroleo_kbbl_d"
+        for alcance in ("todo", "energia", "energia.produccion_vaca_muerta_mensual", serie):
+            self.assertTrue(catalogo.alcance_aplica(alcance, serie), alcance)
+        for alcance in ("sector_externo", "energia.produccion_petroleo_gas_mensual", "energ", "energia.produccion"):
+            self.assertFalse(catalogo.alcance_aplica(alcance, serie), alcance)
+
     def test_declaracion_invalida_se_rechaza(self):
         with self.assertRaises(ValueError):
             armador_de_prueba("energia", "a", [declaracion("a.csv", "x", uso="principal")], {}, [])

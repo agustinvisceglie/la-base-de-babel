@@ -1,8 +1,6 @@
 """
-Series de producción de petróleo y gas de la Argentina (bloque Energía).
-
-Ubicación provisoria: la carpeta series/ guarda los armadores de series genéricas (no atadas a una
-nota) hasta que se migre a la arquitectura aprobada (Paso 3c del instructivo).
+Bloque 2, energía: producción de petróleo y gas de la Argentina (armador; migrado en el Paso 3c
+desde series/produccion_hidrocarburos.py).
 
 Qué hace:
     1. Serie mensual nacional de petróleo y gas por subtipo de recurso (convencional, shale y tight)
@@ -16,7 +14,7 @@ Qué hace:
          más reciente de la SE que lo contiene, entre los DDJJ de cada año y el archivo de pozos no
          convencionales, en todas sus versiones guardadas (regla general, no un parche por pozo);
        - Vaca Muerta = formación productiva (formprod) VMUT y tipo de recurso NO CONVENCIONAL.
-    3. Controles (en datos/validacion/):
+    3. Controles (en datos/validacion/energia/):
        - internos de las series agregadas (meses, vacíos, unidades, factor, subtipos, cuencas);
        - DDJJ con la clasificación vigente vs. serie agregada, mes por mes desde 2010: total, shale y
          tight, petróleo y gas (tight = TIGHT + no convencional sin subtipo, regla de la SE), y lo que
@@ -33,10 +31,10 @@ Qué hace:
        - versiones: serie agregada vs. archivo anual de 2026 (más reciente), por mes;
        - primera difusión vs. dato vigente (sin aprobar ni rechazar: se muestra la revisión).
     Antes de bajar nada revisa el portal: si no responde, o si lo que cambió supera 1 GB y no se pasó
-    --ok-descarga-grande, frena sin bajar (regla 8 del instructivo).
-    Cada archivo crudo se guarda también como versión (fecha de publicación + hash) en
-    datos/crudos/secretaria_energia/versiones/, sin pisar las anteriores; el registro queda en
-    datos/validacion/versiones_crudos.csv.
+    actualizar.py --ok-descarga-grande, frena sin bajar (regla 8 del instructivo). Con
+    --sin-descargar o --crudos-al no usa internet: lee las versiones registradas.
+    Cada crudo se guarda como versión comprimida (fecha de publicación + hash) en
+    datos/crudos/secretaria_energia/versiones/; el registro queda en datos/registros/versiones_crudos.csv.
 
 Unidades:
     - petróleo: m3 del mes, m3/d (m3 ÷ días del mes) y kbbl/d (m3 × 6,28981 ÷ días del mes ÷ 1.000);
@@ -44,42 +42,24 @@ Unidades:
 
 Decisiones pendientes (no se toman acá): promedio anual; corte común de cada nota.
 
-Fuentes: SE, datos.energia.gob.ar (detalle en scripts/secretaria_energia.py).
+Fuentes: SE, datos.energia.gob.ar (lector: lectores/secretaria_energia.py).
 
-Genera:
-    - datos/procesados/produccion_petroleo_gas_mensual.csv
-    - datos/procesados/produccion_vaca_muerta_mensual.csv
-    - datos/validacion/produccion_controles.csv
-    - datos/validacion/produccion_ddjj_vs_serie.csv
-    - datos/validacion/produccion_reclasificaciones.csv
-    - datos/validacion/produccion_vaca_muerta_ddjj_vs_no_convencional.csv
-    - datos/validacion/produccion_no_convencional_vs_serie.csv
-    - datos/validacion/produccion_regla_sin_subtipo.csv
-    - datos/validacion/produccion_meses_que_no_cierran.csv
-    - datos/validacion/produccion_cobertura_no_convencional.csv
-    - datos/validacion/produccion_anuales_vs_serie.csv
-    - datos/validacion/produccion_versiones_2026.csv
-    - datos/validacion/produccion_vs_primera_difusion.csv
-    - datos/validacion/descargas_produccion.csv
+Genera (lo escribe actualizar.py):
+    - datos/series/energia/produccion_petroleo_gas_mensual.csv y produccion_vaca_muerta_mensual.csv
+    - datos/validacion/energia/produccion_controles.csv y las tablas de validación produccion_*.csv
+      (ddjj_vs_serie, reclasificaciones, vaca_muerta_ddjj_vs_no_convencional, no_convencional_vs_serie,
+      regla_sin_subtipo, meses_que_no_cierran, cobertura_no_convencional, anuales_vs_serie,
+      versiones_2026, vs_primera_difusion) y descargas_produccion.csv
 
 Uso (desde la raíz del repositorio):
-    .venv/Scripts/python series/produccion_hidrocarburos.py [--ok-descarga-grande]
+    .venv/Scripts/python actualizar.py --bloque energia [--ok-descarga-grande]
 """
-
-import argparse
-import sys
-from pathlib import Path
-
-RAIZ = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(RAIZ))  # para poder importar scripts/ al correr este archivo directamente
 
 import numpy as np
 import pandas as pd
 
-from scripts import secretaria_energia as se
-from scripts.descargas import PROCESADOS, guardar_registro
-
-VALIDACION = RAIZ / "datos" / "validacion"
+from comun import descargas
+from lectores import secretaria_energia as se
 
 BARRILES_POR_M3 = 6.28981  # el mismo factor que usa la SE en su columna kbbl_diario (ver controles)
 SUBTIPOS = ["total", "convencional", "shale", "tight"]
@@ -119,6 +99,48 @@ PRIMERA_DIFUSION = [
      "Sin fuente oficial encontrada. Solo prensa: DolarHoy, 21/10/2026 (sin atribución) e iProfesional "
      "(informe de RICSA con datos de la Secretaría de Energía)"),
 ]
+
+
+# ---------------------------------------------------------------------------------------------
+# Declaración de series (de acá sale el catálogo)
+# ---------------------------------------------------------------------------------------------
+_URL_SERIES = "http://datos.energia.gob.ar/dataset/c846e79c-026c-4040-897f-1ad3543b407c"
+_ID_PETROLEO = "c846e79c-026c-4040-897f-1ad3543b407c / af8c50bb-fde0-43b7-98eb-7cd14daf586c (serie de petróleo por cuenca y sub tipo de recurso)"
+_ID_GAS = "c846e79c-026c-4040-897f-1ad3543b407c / a3244ddd-38bc-4800-a700-360b649d2f3a (serie de gas natural por cuenca y sub tipo de recurso)"
+_ID_POZOS = ("c846e79c-026c-4040-897f-1ad3543b407c: producción por pozo, variante DDJJ abiertas y cerradas 2010-2026, y "
+             "archivo de pozos no convencionales (clasificación de la publicación más reciente)")
+_UNIDADES = {"m3_mes": "m3 del mes", "m3_d": "m3 por día", "kbbl_d": "miles de barriles por día",
+             "miles_m3_mes": "miles de m3 del mes", "mm3_d": "millones de m3 por día", "pozos": "pozos con registro en el mes"}
+_NOMBRES = {"total": "total del país", "convencional": "convencional", "shale": "shale", "tight": "tight"}
+_CRITERIO = "§3 Producción de petróleo y gas (serie oficial agregada de la SE)"
+_CRITERIO_VM = "§3 Producción: Vaca Muerta = VMUT + no convencional, DDJJ abiertas y cerradas con la clasificación más reciente"
+
+
+def _serie(archivo, columna, nombre, unidad, fuente_id, criterio):
+    return {"archivo": archivo, "columna": columna, "nombre": nombre, "unidad": unidad, "frecuencia": "mensual",
+            "tipo": "nivel", "precios": "no aplica", "ajuste_estacional": "original", "uso": "base",
+            "organismo": "Secretaría de Energía", "rotulo": "oficial", "fuente_id": fuente_id, "fuente_url": _URL_SERIES,
+            "lector": "lectores/secretaria_energia.py", "criterio": criterio, "estimados": "no",
+            "tiene_revisiones": "sí: la SE revisa los meses recientes; la base usa el dato vigente (ver la validación)",
+            "discontinuada": "no", "con_reservas": "no", "informe_validacion": "datos/validacion/energia/produccion_informe_validacion.md"}
+
+
+SERIES = (
+    [_serie("produccion_petroleo_gas_mensual.csv", f"petroleo_{s}_{u}", f"Producción de petróleo, {_NOMBRES[s]}", _UNIDADES[u], _ID_PETROLEO, _CRITERIO)
+     for u in ("m3_mes", "m3_d", "kbbl_d") for s in SUBTIPOS]
+    + [_serie("produccion_petroleo_gas_mensual.csv", f"gas_{s}_{u}", f"Producción de gas natural, {_NOMBRES[s]}", _UNIDADES[u], _ID_GAS, _CRITERIO)
+       for u in ("miles_m3_mes", "mm3_d") for s in SUBTIPOS]
+    + [_serie("produccion_vaca_muerta_mensual.csv", columna, nombre, _UNIDADES[u], _ID_POZOS, _CRITERIO_VM)
+       for columna, nombre, u in (("petroleo_m3_mes", "Producción de petróleo de Vaca Muerta", "m3_mes"),
+                                  ("petroleo_m3_d", "Producción de petróleo de Vaca Muerta", "m3_d"),
+                                  ("petroleo_kbbl_d", "Producción de petróleo de Vaca Muerta", "kbbl_d"),
+                                  ("gas_miles_m3_mes", "Producción de gas natural de Vaca Muerta", "miles_m3_mes"),
+                                  ("gas_mm3_d", "Producción de gas natural de Vaca Muerta", "mm3_d"),
+                                  ("pozos_con_registro", "Pozos de Vaca Muerta con registro en el mes", "pozos"))]
+)
+AUXILIARES = {"produccion_petroleo_gas_mensual.csv": ["dias_del_mes"],
+              "produccion_vaca_muerta_mensual.csv": ["dias_del_mes", "control_shale_vs_serie"]}
+FORMATO = {"produccion_petroleo_gas_mensual.csv": "%.4f", "produccion_vaca_muerta_mensual.csv": "%.4f"}
 
 
 # ---------------------------------------------------------------------------------------------
@@ -728,36 +750,39 @@ def leer_publicaciones_por_pozo(ultimo_mes_completo: pd.Timestamp, registros: li
     return publicaciones, volumenes, pozos_nc, resumen
 
 
-def main():
-    sys.stdout.reconfigure(encoding="utf-8")
-    argumentos = argparse.ArgumentParser(description=__doc__.split("\n")[1])
-    argumentos.add_argument("--ok-descarga-grande", action="store_true",
-                            help="ok de Agustín para bajar más de 1 GB en esta corrida (regla 8 del instructivo)")
-    ok_descarga = argumentos.parse_args().ok_descarga_grande
-    VALIDACION.mkdir(parents=True, exist_ok=True)
+def sesco_mensual(tablas: dict[str, pd.DataFrame]) -> pd.DataFrame:
+    """SESCO: producción promedio diaria total del país (suma de las cuencas), petróleo en m3/d y gas
+    en miles de m3/d, con índice mensual."""
+    columnas = {}
+    for clave, tabla in tablas.items():
+        valor = [c for c in tabla.columns if c.startswith("produccion_")][0]
+        columnas[f"{clave}_{valor}"] = tabla.groupby("indice_tiempo")[valor].sum()
+    tabla = pd.DataFrame(columnas).reset_index()
+    tabla.index = pd.PeriodIndex(tabla.pop("indice_tiempo"), freq="M").to_timestamp()
+    tabla.index.name = "fecha"
+    return tabla
 
-    print("Revisión del portal (sin bajar nada)...")
-    revision = se.revisar_portal(se.archivos_produccion())
-    a_bajar = se.autorizar_descarga(revision, ok_mas_de_1gb=ok_descarga)  # frena si no responde o si pasa 1 GB sin ok
-    print(f"    cambiaron {len(a_bajar)} de {len(revision)} archivos ({a_bajar['bytes_a_bajar'].fillna(0).sum() / 1e9:.3f} GB)")
 
-    print("Series agregadas de la SE...")
+def armar() -> dict:
+    if not descargas.sin_red():
+        # Antes de bajar nada: qué cambió en el portal; frena si no responde o si pasa 1 GB sin ok.
+        se.autorizar_descarga(se.revisar_portal(se.archivos_produccion()))
+
     agregadas, registros = se.descargar_series_agregadas()
     petroleo, gas = agregadas["petroleo"], agregadas["gas"]
     fecha_serie_agregada = registros[0]["fecha_publicacion"]
     # Último mes completo de la fuente oficial: el último mes de la serie agregada de la SE.
     ultimo_mes_completo = min(petroleo.index.max(), gas.index.max())
 
-    print("Producción por pozo: DDJJ abiertas y cerradas y archivo no convencional (con sus versiones)...")
     publicaciones, volumenes, pozos_nc, ddjj_resumen = leer_publicaciones_por_pozo(ultimo_mes_completo, registros)
-    print("Anuales completos y SESCO (solo para controles)...")
     anuales = {}
     for anio in ANIOS_COBERTURA:
         anuales[anio], registro = se.descargar_pozos_anual(anio)
         registros.append(registro)
     anual_2026 = anuales[2026]
-    sesco, regs = se.descargar_sesco_diaria()
+    tablas_sesco, regs = se.descargar_sesco_diaria()
     registros += regs
+    sesco = sesco_mensual(tablas_sesco)
 
     # Clasificación vigente de cada pozo y volúmenes de los DDJJ.
     por_publicacion = pd.concat([clasificacion_por_publicacion(nombre, compacta, fecha)
@@ -786,29 +811,22 @@ def main():
                                 series, ultimo_mes_completo, verificacion, por_publicacion, reclasificados, vm_vs_nc, ddjj_resumen)
     difusion = contrastar_primera_difusion(nacional, vaca_muerta, versiones, sesco)
 
-    nacional.to_csv(PROCESADOS / "produccion_petroleo_gas_mensual.csv", float_format="%.4f", date_format="%Y-%m-%d")
-    vaca_muerta.to_csv(PROCESADOS / "produccion_vaca_muerta_mensual.csv", float_format="%.4f", date_format="%Y-%m-%d")
-    tabla_controles.to_csv(VALIDACION / "produccion_controles.csv", index=False)
-    verificacion.to_csv(VALIDACION / "produccion_ddjj_vs_serie.csv", float_format="%.4f", date_format="%Y-%m-%d")
-    reclasificados.to_csv(VALIDACION / "produccion_reclasificaciones.csv", index=False, float_format="%.4f", date_format="%Y-%m-%d")
-    vm_vs_nc.to_csv(VALIDACION / "produccion_vaca_muerta_ddjj_vs_no_convencional.csv", float_format="%.4f", date_format="%Y-%m-%d")
-    comparacion.to_csv(VALIDACION / "produccion_no_convencional_vs_serie.csv", float_format="%.3f", date_format="%Y-%m-%d")
-    regla.to_csv(VALIDACION / "produccion_regla_sin_subtipo.csv", float_format="%.3f", date_format="%Y-%m-%d")
-    no_cierran.to_csv(VALIDACION / "produccion_meses_que_no_cierran.csv", index=False, float_format="%.4f", date_format="%Y-%m-%d")
-    pd.concat(coberturas.values()).to_csv(VALIDACION / "produccion_cobertura_no_convencional.csv", float_format="%.3f", date_format="%Y-%m-%d")
-    pd.concat(anuales_vs.values()).to_csv(VALIDACION / "produccion_anuales_vs_serie.csv", float_format="%.3f", date_format="%Y-%m-%d")
-    versiones.to_csv(VALIDACION / "produccion_versiones_2026.csv", float_format="%.3f", date_format="%Y-%m-%d")
-    difusion.to_csv(VALIDACION / "produccion_vs_primera_difusion.csv", index=False, float_format="%.3f")
-    guardar_registro(registros, VALIDACION / "descargas_produccion.csv")
-
-    pd.set_option("display.width", 250)
-    pd.set_option("display.max_colwidth", 160)
-    print(f"\nNacional: {nacional.index.min():%m/%Y} a {nacional.index.max():%m/%Y}. "
-          f"Vaca Muerta: {vaca_muerta.index.min():%m/%Y} a {vaca_muerta.index.max():%m/%Y}")
-    print("\nControles:\n" + tabla_controles.to_string(index=False))
-    print("\nReclasificaciones:\n" + reclasificados.drop(columns=["primera_publicacion_con_la_anterior"]).to_string(index=False))
-    print("\nPrimera difusión vs. dato vigente:\n" + difusion.drop(columns=["fuente_primera_difusion", "dato_vigente_de"]).round(2).to_string(index=False))
-
-
-if __name__ == "__main__":
-    main()
+    fechas = {"date_format": "%Y-%m-%d"}
+    return {
+        "series": {"produccion_petroleo_gas_mensual.csv": nacional, "produccion_vaca_muerta_mensual.csv": vaca_muerta},
+        "controles": tabla_controles,
+        "validacion": {
+            "produccion_ddjj_vs_serie.csv": (verificacion, {"float_format": "%.4f", **fechas}),
+            "produccion_reclasificaciones.csv": (reclasificados, {"index": False, "float_format": "%.4f", **fechas}),
+            "produccion_vaca_muerta_ddjj_vs_no_convencional.csv": (vm_vs_nc, {"float_format": "%.4f", **fechas}),
+            "produccion_no_convencional_vs_serie.csv": (comparacion, {"float_format": "%.3f", **fechas}),
+            "produccion_regla_sin_subtipo.csv": (regla, {"float_format": "%.3f", **fechas}),
+            "produccion_meses_que_no_cierran.csv": (no_cierran, {"index": False, "float_format": "%.4f", **fechas}),
+            "produccion_cobertura_no_convencional.csv": (pd.concat(coberturas.values()), {"float_format": "%.3f", **fechas}),
+            "produccion_anuales_vs_serie.csv": (pd.concat(anuales_vs.values()), {"float_format": "%.3f", **fechas}),
+            "produccion_versiones_2026.csv": (versiones, {"float_format": "%.3f", **fechas}),
+            "produccion_vs_primera_difusion.csv": (difusion, {"index": False, "float_format": "%.3f"}),
+            "descargas_produccion.csv": (pd.DataFrame(registros).drop(columns=["descargado"], errors="ignore"), {"index": False}),
+        },
+        "registros": registros,
+    }

@@ -22,7 +22,7 @@ Repositorio de datos y código de "Sobre Modelos y Tumbas", publicación de Agus
   - Nunca datos internos de empresas ni datos que no sean públicos.
 - Toda serie tiene documentado: organismo, ID o URL exacta, unidad, frecuencia y fecha de descarga.
 - Las unidades van en el nombre de la columna (`_musd` = millones de USD, `_kbbl_d` = miles de barriles por día, `_mm3_d` = millones de m3 por día).
-- Las descargas originales van a `datos/crudos/` y no se modifican; la limpieza genera archivos nuevos en `datos/procesados/`.
+- Las descargas originales se guardan como versiones comprimidas en `datos/crudos/<organismo>/versiones/` (no van a Git; respaldo en el OneDrive personal) y nunca se modifican; su hash queda en `datos/registros/versiones_crudos.csv`. Las series limpias las arma `actualizar.py` en `datos/series/<bloque>/`, con su fila en `catalogo_series.csv`, y la validación de cada bloque va a `datos/validacion/<bloque>/`.
 - Solo estimaciones aprobadas por Agustín, marcadas en la columna 'fuente', con la aclaración en toda nota o gráfico que las use.
 
 ## Controles obligatorios antes de dar por bueno un número

@@ -1,8 +1,10 @@
 # Informe de validación: producción de petróleo y gas
 
-Series genéricas del bloque Energía (no atadas a una nota). Armador: `series/produccion_hidrocarburos.py`. Lectores: `scripts/secretaria_energia.py`. Última corrida: 25/11/2026 (Paso 1 del instructivo).
+Bloque de energía. Armador: `bloques/energia/produccion.py` (hasta el Paso 3c, `series/produccion_hidrocarburos.py`). Lector: `lectores/secretaria_energia.py` (hasta el Paso 3c, `scripts/secretaria_energia.py`). Última corrida: 25/11/2026 (Paso 3c: migración sin cambios de números; los del Paso 1 siguen vigentes).
 
-**Cómo leer este informe:** lo vigente va desde "Actualización del 25/11/2026" hasta "Decisiones abiertas". Desde "Antecedente: corrida del 18/11/2026" en adelante es **histórico** (método anterior, versiones anteriores y nombres de columnas anteriores); se conserva como registro de cómo se llegó a la decisión. Los números vigentes están en los CSV de `datos/validacion/` y `datos/procesados/`.
+**Migración (Paso 3c, 25/11/2026).** Las series pasaron de `datos/procesados/` a `datos/series/energia/` y la validación de `datos/validacion/` a `datos/validacion/energia/`. El lector lee las versiones comprimidas (sin copia "vigente"). Con los crudos que había el 25/11/2026 a las 10:59, la serie nacional, la de Vaca Muerta y sus tablas de validación son idénticas, texto contra texto, a las del commit `19f26b0` (Paso 1); lo controla `tests/test_migracion_produccion.py`.
+
+**Cómo leer este informe:** lo vigente va desde "Actualización del 25/11/2026" hasta "Decisiones abiertas". Desde "Antecedente: corrida del 18/11/2026" en adelante es **histórico** (método anterior, versiones anteriores y nombres de columnas anteriores); se conserva como registro de cómo se llegó a la decisión. Los números vigentes están en los CSV de `datos/validacion/energia/` y `datos/series/energia/`.
 
 ## Actualización del 25/11/2026 (Paso 1): Vaca Muerta con la variante "DDJJ abiertas y cerradas"
 
@@ -30,8 +32,8 @@ Criterio aplicado (criterios, sección 3, aprobado el 19/11): volúmenes por poz
 
 | Archivo | Qué es | Período |
 |---|---|---|
-| `datos/procesados/produccion_petroleo_gas_mensual.csv` | Petróleo y gas, total y por subtipo de recurso (convencional, shale y tight): volumen del mes y promedio diario | 01/2006–10/2026 (al 25/11/2026) |
-| `datos/procesados/produccion_vaca_muerta_mensual.csv` | Vaca Muerta (formprod VMUT + tipo de recurso NO CONVENCIONAL, con la clasificación más reciente de la SE; volúmenes de los DDJJ abiertas y cerradas): volumen del mes, promedio diario, pozos con registro y columna `control_shale_vs_serie` (OK si el shale de los DDJJ cierra contra la serie agregada ese mes; REVISAR si no) | 01/2010–10/2026 (al 25/11/2026) |
+| `datos/series/energia/produccion_petroleo_gas_mensual.csv` | Petróleo y gas, total y por subtipo de recurso (convencional, shale y tight): volumen del mes y promedio diario | 01/2006–10/2026 (al 25/11/2026) |
+| `datos/series/energia/produccion_vaca_muerta_mensual.csv` | Vaca Muerta (formprod VMUT + tipo de recurso NO CONVENCIONAL, con la clasificación más reciente de la SE; volúmenes de los DDJJ abiertas y cerradas): volumen del mes, promedio diario, pozos con registro y columna `control_shale_vs_serie` (OK si el shale de los DDJJ cierra contra la serie agregada ese mes; REVISAR si no) | 01/2010–10/2026 (al 25/11/2026) |
 
 *Cambio de nombre de columna (25/11/2026):* en `produccion_vaca_muerta_mensual.csv`, la columna de control se llama `control_shale_vs_serie`. Hasta la corrida del 18/11 se llamaba `control_cobertura` y comparaba el archivo de pozos no convencionales contra la serie; ese nombre ya no existe en la base.
 
