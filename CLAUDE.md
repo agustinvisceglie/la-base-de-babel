@@ -14,7 +14,12 @@ Repositorio de datos y código de "Sobre Modelos y Tumbas", publicación de Agus
 - Cada script empieza con un comentario de qué hace, qué fuentes usa y qué genera.
 
 ## Datos
-- Solo fuentes públicas oficiales: INDEC, BCRA, Secretaría de Energía, API de Series de Tiempo (apis.datos.gob.ar/series). Nunca datos privados ni de empresas.
+- Fuentes permitidas (regla 4 del instructivo de trabajo):
+  - **Permitidas:** oficiales argentinas; organismos oficiales extranjeros e internacionales (BLS, EIA, Banco Mundial, FMI); y **solo** las fuentes de mercado aprobadas (Índice CCL de A3 Mercados, Índice CCL de BYMA, precios de ADR y de acciones locales para el CCL anterior a 2020), siempre rotuladas "no oficial".
+  - **Excepciones aprobadas después:** la Encuesta de Expectativas de Inflación y el Índice de Confianza del Consumidor de la UTDT (sección 21 de los criterios, rótulo "no oficial (académica)"). Caución, repo y tasas de Lecap cortas: series de tasas con licencia verificada (sección 19). Índices privados, breakevens y futuros: solo como `uso = control` y con licencia verificada (secciones 17, 19 y 21).
+  - **Sin licencia clara:** si una fuente no la tiene o sus condiciones de uso prohíben la descarga automática, frenar e informarlo.
+  - **Prohibido:** nada del empleador actual de Agustín ni de sus clientes, y la cuenta de GitHub de trabajo no aparece en ningún lado.
+  - Nunca datos internos de empresas ni datos que no sean públicos.
 - Toda serie tiene documentado: organismo, ID o URL exacta, unidad, frecuencia y fecha de descarga.
 - Las unidades van en el nombre de la columna (`_musd` = millones de USD, `_kbbl_d` = miles de barriles por día, `_mm3_d` = millones de m3 por día).
 - Las descargas originales van a `datos/crudos/` y no se modifican; la limpieza genera archivos nuevos en `datos/procesados/`.
@@ -31,6 +36,27 @@ Repositorio de datos y código de "Sobre Modelos y Tumbas", publicación de Agus
 - No decidir criterios económicos. Ante cualquier decisión de definición, serie, agrupación, método, período o unidad: frenar, presentar las opciones con sus pros y contras, y esperar la decisión de Agustín (que la valida en el chat del proyecto contra al menos 5 fuentes profesionales).
 - Todo lo que se entrega es auditado en el chat del proyecto: citar URL/ID y cuadro de cada dato, separar lo verificado de lo supuesto, y antes de afirmar que un dato no existe listar todas las fuentes revisadas.
 - Seguir la convención del INDEC, la Secretaría de Energía, el BCRA y las consultoras, salvo razón fuerte y documentada.
+
+## Criterios económicos: fuente de verdad
+- Los criterios económicos decididos y validados están en `criterios-metodologicos.md` (secciones 1 a 24, con las fuentes profesionales que respaldan cada uno), en la carpeta de trabajo de Substack (OneDrive), fuera de este repositorio. **Es la fuente de verdad**: ante una duda, manda ese archivo.
+- La hoja de ruta del trabajo en este repositorio (pasos, reglas permanentes y formato de informe) es `instructivo-code.md`, en la misma carpeta.
+
+## Reglas permanentes (del instructivo de trabajo; valen para todos los pasos)
+1. **Un paso por vez.** Al terminar un paso, frenar y entregar el informe. El siguiente arranca recién cuando Agustín lo indica, después de la auditoría.
+2. **No decidir criterios económicos.** Si aparece una elección de definición, serie, agrupación, método, período, unidad, empalme o tratamiento de un dato faltante que **no** esté resuelta en `criterios-metodologicos.md`, frenar y presentarla con sus opciones. No elegir "la más razonable". Las decisiones ya tomadas **no se reabren**: si alguna parece mal, se dice en el informe, pero se aplica tal cual.
+3. **Git:**
+   - commit al final de cada paso, con un mensaje claro;
+   - **nunca push** sin el ok explícito de Agustín;
+   - nunca borrar archivos ni reescribir el historial;
+   - `git pull` antes de empezar si hubo trabajo en la otra PC (la notebook no se usa con Code).
+4. **Fuentes:** solo las de la lista de "Datos" (arriba), con sus rótulos, sus excepciones y lo prohibido.
+5. **Reproducibilidad:**
+   - todo número sale de un crudo versionado y de código;
+   - nada se tipea a mano, salvo los registros de normas (hitos, regímenes, derechos de exportación), que llevan la norma y el enlace en cada fila.
+6. **Controles bloqueantes:**
+   - un control que falla frena el armado del bloque, salvo que haya una excepción aprobada en `datos/registros/excepciones.csv`;
+   - las excepciones las propone Code y las aprueba Agustín. Code **no** las da de alta por su cuenta.
+7. **Nada de "parches":** si para que algo cierre hace falta tocar un dato puntual, eso es una decisión. Frenar.
 
 ## Forma de trabajar
 - Antes de hacer `git push`, mostrarle a Agustín qué cambió y esperar su ok.
